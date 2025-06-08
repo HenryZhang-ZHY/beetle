@@ -1,6 +1,8 @@
 use beetle::Command;
 use std::path::PathBuf;
 
+// These tests focus on command structure and parsing without side effects
+
 #[test]
 fn test_create_command_parsing() {
     // Test the command structure directly since we can't easily mock CLI args
@@ -11,7 +13,11 @@ fn test_create_command_parsing() {
     };
 
     match command {
-        Command::Create { index_name, repo_path, output_path } => {
+        Command::Create {
+            index_name,
+            repo_path,
+            output_path,
+        } => {
             assert_eq!(index_name, "my_index");
             assert_eq!(repo_path, PathBuf::from("/path/to/repo"));
             assert_eq!(output_path, PathBuf::from("/path/to/output"));
@@ -50,9 +56,11 @@ fn test_command_variants() {
         query: "search query".to_string(),
     };
 
+    let list_cmd = Command::List;
+
     // Verify they're different variants
-    match (&create_cmd, &search_cmd) {
-        (Command::Create { .. }, Command::Search { .. }) => {
+    match (&create_cmd, &search_cmd, &list_cmd) {
+        (Command::Create { .. }, Command::Search { .. }, Command::List) => {
             // This is expected
         }
         _ => panic!("Commands should be different variants"),
@@ -78,7 +86,11 @@ fn test_pathbuf_handling() {
     };
 
     match cmd1 {
-        Command::Create { repo_path, output_path, .. } => {
+        Command::Create {
+            repo_path,
+            output_path,
+            ..
+        } => {
             assert_eq!(repo_path, windows_path);
             assert_eq!(output_path, unix_path);
         }
@@ -86,7 +98,11 @@ fn test_pathbuf_handling() {
     }
 
     match cmd2 {
-        Command::Create { repo_path, output_path, .. } => {
+        Command::Create {
+            repo_path,
+            output_path,
+            ..
+        } => {
             assert_eq!(repo_path, relative_path);
             assert_eq!(output_path, PathBuf::from("."));
         }
@@ -127,5 +143,68 @@ fn test_string_handling() {
             assert_eq!(query, multiline_string);
         }
         _ => panic!("Expected Search command"),
+    }
+}
+
+#[test]
+fn test_command_serialization() {
+    // Test that commands can be debugged and formatted properly
+    let create_cmd = Command::Create {
+        index_name: "debug_test".to_string(),
+        repo_path: PathBuf::from("/debug/repo"),
+        output_path: PathBuf::from("/debug/output"),
+    };
+
+    let debug_output = format!("{:?}", create_cmd);
+    assert!(debug_output.contains("Create"));
+    assert!(debug_output.contains("debug_test"));
+    assert!(debug_output.contains("/debug/repo"));
+    assert!(debug_output.contains("/debug/output"));
+
+    let search_cmd = Command::Search {
+        index_name: "search_debug".to_string(),
+        query: "debug query".to_string(),
+    };
+
+    let debug_output = format!("{:?}", search_cmd);
+    assert!(debug_output.contains("Search"));
+    assert!(debug_output.contains("search_debug"));
+    assert!(debug_output.contains("debug query"));
+
+    let list_cmd = Command::List;
+    let debug_output = format!("{:?}", list_cmd);
+    assert!(debug_output.contains("List"));
+}
+
+#[test]
+fn test_command_cloning() {
+    // Test that commands can be cloned properly
+    let original = Command::Create {
+        index_name: "clone_original".to_string(),
+        repo_path: PathBuf::from("/original/repo"),
+        output_path: PathBuf::from("/original/output"),
+    };
+
+    let cloned = original.clone();
+
+    // Verify that both are identical
+    match (original, cloned) {
+        (
+            Command::Create {
+                index_name: n1,
+                repo_path: r1,
+                output_path: o1,
+            },
+            Command::Create {
+                index_name: n2,
+                repo_path: r2,
+                output_path: o2,
+            },
+        ) => {
+            assert_eq!(n1, n2);
+            assert_eq!(r1, r2);
+            assert_eq!(o1, o2);
+        }
+        _ => panic!("Commands should be identical Create variants"),
     }
 }
