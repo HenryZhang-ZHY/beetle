@@ -1,20 +1,6 @@
-[package]
-name = "beetle"
-version = "0.1.0"
-edition = "2021"
-
-[[bin]]
-name = "beetle"
-path = "src/main.rs"
-
-[lib]
-name = "beetle"
-path = "src/lib.rs"
-
-[dependencies]
-bpaf = "0.9"
-tantivy = "0.24"
-walkdir = "2.3"
-anyhow = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+[workspace]
+members = [
+    "apps/cli",
+    "crates/beetle_engine",
+]
+resolver = "2"

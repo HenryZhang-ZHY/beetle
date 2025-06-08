@@ -1,0 +1,13 @@
+[package]
+name = "beetle-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "beetle"
+path = "src/main.rs"
+
+[dependencies]
+beetle_engine = { path = "../../crates/beetle_engine" }
+bpaf = "0.9"
+anyhow = "1.0"

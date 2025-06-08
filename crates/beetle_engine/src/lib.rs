@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use bpaf::*;
 use std::fs;
 use std::path::PathBuf;
 use tantivy::collector::TopDocs;
@@ -9,155 +8,12 @@ use tantivy::schema::{Schema, STORED, TEXT};
 use tantivy::{doc, Index, IndexWriter, ReloadPolicy, TantivyDocument};
 use walkdir::WalkDir;
 
-/// Command enum representing the different operations beetle can perform.
-///
-/// # Examples
-///
-/// Creating a new index:
-/// ```
-/// use beetle::Command;
-/// use std::path::PathBuf;
-///
-/// let cmd = Command::Create {
-///     index_name: "my_index".to_string(),
-///     repo_path: PathBuf::from("/path/to/repo"),
-///     output_path: PathBuf::from("/path/to/output"),
-/// };
-/// ```
-///
-/// Searching an existing index:
-/// ```
-/// use beetle::Command;
-///
-/// let cmd = Command::Search {
-///     index_name: "my_index".to_string(),
-///     query: "function main".to_string(),
-/// };
-/// ```
-#[derive(Debug, Clone)]
-pub enum Command {
-    /// Create a new search index from a repository
-    Create {
-        /// Name of the index to create
-        index_name: String,
-        /// Path to the repository folder to be indexed
-        repo_path: PathBuf,
-        /// Path where the index files will be stored
-        output_path: PathBuf,
-    },
-    /// Search an existing index
-    Search {
-        /// Name of the index to search
-        index_name: String,
-        /// Search query string
-        query: String,
-    },
-    /// List all available indexes
-    List,
-}
-
-pub fn create_command() -> OptionParser<Command> {
-    let repo_path = short('p')
-        .long("path")
-        .argument::<PathBuf>("PATH")
-        .help("Path to the repository folder to be indexed");
-
-    let output_path = short('o')
-        .long("output")
-        .argument::<PathBuf>("OUTPUT")
-        .help("Path for the index files");
-
-    let index_name = positional::<String>("INDEX_NAME").help("Name of the index to create");
-
-    construct!(Command::Create {
-        repo_path,
-        output_path,
-        index_name,
-    })
-    .to_options()
-}
-
-pub fn search_command() -> OptionParser<Command> {
-    let query = short('q')
-        .long("query")
-        .argument::<String>("QUERY")
-        .help("Search query");
-
-    let index_name = positional::<String>("INDEX_NAME").help("Name of the index to search");
-
-    construct!(Command::Search { query, index_name }).to_options()
-}
-
-pub fn list_command() -> OptionParser<Command> {
-    pure(Command::List).to_options()
-}
-
-pub fn cli() -> OptionParser<Command> {
-    let create = create_command()
-        .command("create")
-        .help("Create a new search index");
-
-    let search = search_command()
-        .command("search")
-        .help("Search an existing index");
-
-    let list = list_command()
-        .command("list")
-        .help("List all available indexes");
-
-    construct!([create, search, list])
-        .to_options()
-        .descr("Beetle - A source code search tool")
-        .header("Search and index source code repositories")
-        .footer("Examples:\n  beetle create myindex -p /path/to/repo -o /path/to/index\n  beetle search myindex -q \"function name\"\n  beetle list")
-}
-
-/// Execute a command and return the formatted output string.
-///
-/// This function takes a `Command` and executes the actual indexing or searching operation.
-///
-/// # Arguments
-///
-/// * `command` - The command to execute
-///
-/// # Examples
-///
-/// ```
-/// use beetle::{Command, execute_command};
-/// use std::path::PathBuf;
-///
-/// let cmd = Command::Create {
-///     index_name: "test".to_string(),
-///     repo_path: PathBuf::from("/repo"),
-///     output_path: PathBuf::from("/output"),
-/// };
-///
-/// let result = execute_command(cmd);
-/// // This will actually create the index
-/// ```
-pub fn execute_command(command: Command) -> String {
-    match command {
-        Command::Create {
-            index_name,
-            repo_path,
-            output_path,
-        } => match create_index(&index_name, &repo_path, &output_path) {
-            Ok(message) => message,
-            Err(e) => format!("Error creating index: {}", e),
-        },
-        Command::Search { index_name, query } => match search_index(&index_name, &query) {
-            Ok(results) => results,
-            Err(e) => format!("Error searching index: {}", e),
-        },
-        Command::List => match list_indexes() {
-            Ok(list) => list,
-            Err(e) => format!("Error listing indexes: {}", e),
-        },
-    }
-}
-
 /// Create a new search index from a repository
-fn create_index(index_name: &str, repo_path: &PathBuf, output_path: &PathBuf) -> Result<String> {
+pub fn create_index(
+    index_name: &str,
+    repo_path: &PathBuf,
+    output_path: &PathBuf,
+) -> Result<String> {
     // Create schema
     let mut schema_builder = Schema::builder();
     let title = schema_builder.add_text_field("title", TEXT | STORED);
@@ -267,7 +123,7 @@ fn create_index(index_name: &str, repo_path: &PathBuf, output_path: &PathBuf) ->
 }
 
 /// Search an existing index
-fn search_index(index_name: &str, query_str: &str) -> Result<String> {
+pub fn search_index(index_name: &str, query_str: &str) -> Result<String> {
     // Try to find the index in common locations
     let possible_paths = vec![
         PathBuf::from(index_name),
@@ -363,7 +219,7 @@ fn search_index(index_name: &str, query_str: &str) -> Result<String> {
 }
 
 /// List all available indexes
-fn list_indexes() -> Result<String> {
+pub fn list_indexes() -> Result<String> {
     let search_paths = vec![
         PathBuf::from("indexes"),
         PathBuf::from("indices"),
@@ -461,7 +317,7 @@ fn get_index_info(index_path: &PathBuf) -> Result<IndexInfo> {
 }
 
 /// Format file size in human readable format
-fn format_size(bytes: u64) -> String {
+pub fn format_size(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
     let mut size = bytes as f64;
     let mut unit_index = 0;
@@ -477,6 +333,7 @@ fn format_size(bytes: u64) -> String {
         format!("{:.1} {}", size, UNITS[unit_index])
     }
 }
+
 fn extract_snippet(text: &str, query: &str, max_length: usize) -> String {
     let query_words: Vec<&str> = query
         .split_whitespace()
@@ -538,129 +395,6 @@ fn extract_snippet(text: &str, query: &str, max_length: usize) -> String {
 mod tests {
     use super::test_utils::*;
     use super::*;
-    use std::path::PathBuf;
-
-    #[test]
-    fn test_command_creation() {
-        let command = Command::Create {
-            index_name: "test_index".to_string(),
-            repo_path: PathBuf::from("/path/to/repo"),
-            output_path: PathBuf::from("/path/to/output"),
-        };
-
-        // Test that command is created correctly
-        match command {
-            Command::Create {
-                index_name,
-                repo_path,
-                output_path,
-            } => {
-                assert_eq!(index_name, "test_index");
-                assert_eq!(repo_path, PathBuf::from("/path/to/repo"));
-                assert_eq!(output_path, PathBuf::from("/path/to/output"));
-            }
-            _ => panic!("Expected Create command"),
-        }
-    }
-
-    #[test]
-    fn test_search_command_creation() {
-        let command = Command::Search {
-            index_name: "my_index".to_string(),
-            query: "function main".to_string(),
-        };
-
-        // Test that command is created correctly
-        match command {
-            Command::Search { index_name, query } => {
-                assert_eq!(index_name, "my_index");
-                assert_eq!(query, "function main");
-            }
-            _ => panic!("Expected Search command"),
-        }
-    }
-
-    #[test]
-    fn test_command_clone() {
-        let original_command = Command::Create {
-            index_name: "clone_test".to_string(),
-            repo_path: PathBuf::from("/test/path"),
-            output_path: PathBuf::from("/test/output"),
-        };
-
-        let cloned_command = original_command.clone();
-
-        // Both commands should be identical
-        match (original_command, cloned_command) {
-            (
-                Command::Create {
-                    index_name: n1,
-                    repo_path: r1,
-                    output_path: o1,
-                },
-                Command::Create {
-                    index_name: n2,
-                    repo_path: r2,
-                    output_path: o2,
-                },
-            ) => {
-                assert_eq!(n1, n2);
-                assert_eq!(r1, r2);
-                assert_eq!(o1, o2);
-            }
-            _ => panic!("Commands should be identical"),
-        }
-    }
-
-    #[test]
-    fn test_command_debug() {
-        let command = Command::Search {
-            index_name: "debug_test".to_string(),
-            query: "test query".to_string(),
-        };
-
-        let debug_output = format!("{:?}", command);
-
-        assert!(debug_output.contains("Search"));
-        assert!(debug_output.contains("debug_test"));
-        assert!(debug_output.contains("test query"));
-    }
-
-    #[test]
-    fn test_empty_strings() {
-        let command = Command::Search {
-            index_name: "".to_string(),
-            query: "".to_string(),
-        };
-
-        // Test that empty strings are handled
-        match command {
-            Command::Search { index_name, query } => {
-                assert_eq!(index_name, "");
-                assert_eq!(query, "");
-            }
-            _ => panic!("Expected Search command"),
-        }
-    }
-
-    #[test]
-    fn test_long_strings() {
-        let long_name = "a".repeat(1000);
-        let long_query = "b".repeat(2000);
-
-        let command = Command::Search {
-            index_name: long_name.clone(),
-            query: long_query.clone(),
-        };
-
-        match command {
-            Command::Search { index_name, query } => {
-                assert_eq!(index_name, long_name);
-                assert_eq!(query, long_query);
-            }
-            _ => panic!("Expected Search command"),
-        }
-    }
 
     #[test]
     fn test_in_memory_index_creation() {
@@ -708,29 +442,6 @@ mod tests {
                 );
             }
         }
-    }
-
-    #[test]
-    fn test_mock_execute_command() {
-        // Test that mock execute_command works without side effects
-        let create_cmd = Command::Create {
-            index_name: "test_mock".to_string(),
-            repo_path: PathBuf::from("/nonexistent/path"),
-            output_path: PathBuf::from("/nonexistent/output"),
-        };
-
-        let result = mock_execute_command(create_cmd);
-        assert!(result.contains("Successfully created index"));
-        assert!(result.contains("test_mock"));
-
-        let search_cmd = Command::Search {
-            index_name: "test_search".to_string(),
-            query: "test query".to_string(),
-        };
-
-        let result = mock_execute_command(search_cmd);
-        assert!(result.contains("Found 0 results"));
-        assert!(result.contains("test query"));
     }
 
     #[test]
@@ -794,32 +505,6 @@ mod test_utils {
 
         index_writer.commit()?;
         Ok(index)
-    }
-
-    /// Mock execute_command function that doesn't create files
-    pub fn mock_execute_command(command: Command) -> String {
-        match command {
-            Command::Create { index_name, repo_path, output_path } => {
-                // Simulate successful creation without actually creating files
-                format!(
-                    "Successfully created index '{}':\n  Index path: {}\n  Files indexed: 0\n  Total content size: 0 bytes\n  Repository path: {}",
-                    index_name,
-                    output_path.join(&index_name).display(),
-                    repo_path.display()
-                )
-            }
-            Command::Search { index_name, query } => {
-                // Simulate search results without actual index
-                if index_name.is_empty() || query.is_empty() {
-                    format!("No results found for query: '{}'", query)
-                } else {
-                    format!("Found 0 results for query '{}':\n\n", query)
-                }
-            }
-            Command::List => {
-                "No indexes found. Create one with: beetle create <index_name> -p <repo_path> -o <output_path>".to_string()
-            }
-        }
     }
 
     /// Search an in-memory index for testing
