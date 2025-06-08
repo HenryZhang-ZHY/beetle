@@ -1,0 +1,6 @@
+[tools]
+pnpm = "latest"
+rust = "latest"
+node = "latest"
+claude-code = "latest"
+bun = "latest"

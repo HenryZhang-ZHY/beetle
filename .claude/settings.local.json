@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm dlx:*)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm build)",
+      "Bash(cargo build:*)",
+      "Bash(cargo test:*)",
+      "Bash(find:*)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "WebFetch(domain:localhost)",
+      "Bash(mkdir:*)"
+    ],
+    "deny": []
+  }
+}

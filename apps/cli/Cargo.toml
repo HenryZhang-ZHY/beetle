@@ -1,0 +1,27 @@
+[package]
+name = "beetle"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "beetle"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+axum = "0.8.4"
+engine = { path = "../../crates/engine" }
+bpaf = "0.9"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.45.1", features = ["full"] }
+include_dir = "0.7"
+mime_guess = "2.0"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+tempfile = "3.8"
+serial_test = "3.0"

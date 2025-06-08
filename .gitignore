@@ -1,0 +1,9 @@
+/target
+
+dist
+node_modules
+
+indexes
+test_repo
+
+.claude
