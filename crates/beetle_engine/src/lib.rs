@@ -6,7 +6,7 @@ mod utils;
 
 pub use document::Document;
 pub use formatter::{JsonFormatter, PlainTextFormatter, ResultFormatter};
-pub use index_manager::{IndexInfo, IndexManager, IndexMetadata, IndexingStats};
+pub use index_manager::{IndexInfo, IndexManager, IndexMetadata, IndexingOptions, IndexingStats};
 pub use query::{SearchOptions, SearchResult};
 
 use anyhow::Result;
@@ -17,10 +17,11 @@ pub fn create_index<F: ResultFormatter>(
     index_name: &str,
     repo_path: &PathBuf,
     output_path: &PathBuf,
+    options: IndexingOptions,
     formatter: &F,
 ) -> Result<String> {
     let manager = IndexManager::new(output_path.clone());
-    let mut stats = manager.create_index(index_name, repo_path)?;
+    let mut stats = manager.create_index(index_name, repo_path, Some(options))?;
 
     // Update stats with the actual paths used
     stats.index_name = index_name.to_string();

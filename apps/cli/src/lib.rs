@@ -1,4 +1,7 @@
-use beetle_engine::{create_index, list_indexes, search_index, JsonFormatter, PlainTextFormatter, SearchOptions};
+use beetle_engine::{
+    create_index, list_indexes, search_index, IndexingOptions, JsonFormatter, PlainTextFormatter,
+    SearchOptions,
+};
 use bpaf::*;
 use std::path::PathBuf;
 
@@ -101,7 +104,12 @@ pub fn search_command() -> OptionParser<Command> {
 
     let index_name = positional::<String>("INDEX_NAME").help("Name of the index to search");
 
-    construct!(Command::Search { query, formatter, index_name }).to_options()
+    construct!(Command::Search {
+        query,
+        formatter,
+        index_name
+    })
+    .to_options()
 }
 
 pub fn list_command() -> OptionParser<Command> {
@@ -157,11 +165,21 @@ pub fn execute_command(command: Command) -> String {
             index_name,
             repo_path,
             output_path,
-        } => match create_index(&index_name, &repo_path, &output_path, &PlainTextFormatter) {
+        } => match create_index(
+            &index_name,
+            &repo_path,
+            &output_path,
+            IndexingOptions::new(),
+            &PlainTextFormatter,
+        ) {
             Ok(message) => message,
             Err(e) => format!("Error creating index: {}", e),
         },
-        Command::Search { index_name, query, formatter } => {
+        Command::Search {
+            index_name,
+            query,
+            formatter,
+        } => {
             match formatter {
                 OutputFormat::Text => {
                     match search_index(
@@ -173,7 +191,7 @@ pub fn execute_command(command: Command) -> String {
                         Ok(results) => results,
                         Err(e) => format!("Error searching index: {}", e),
                     }
-                },
+                }
                 OutputFormat::Json => {
                     match search_index(
                         &index_name,
@@ -232,7 +250,11 @@ mod tests {
 
         // Test that command is created correctly
         match command {
-            Command::Search { index_name, query, formatter } => {
+            Command::Search {
+                index_name,
+                query,
+                formatter,
+            } => {
                 assert_eq!(index_name, "my_index");
                 assert_eq!(query, "function main");
                 matches!(formatter, OutputFormat::Text);
@@ -298,7 +320,11 @@ mod tests {
 
         // Test that empty strings are handled
         match command {
-            Command::Search { index_name, query, formatter: _ } => {
+            Command::Search {
+                index_name,
+                query,
+                formatter: _,
+            } => {
                 assert_eq!(index_name, "");
                 assert_eq!(query, "");
             }
@@ -318,7 +344,11 @@ mod tests {
         };
 
         match command {
-            Command::Search { index_name, query, formatter: _ } => {
+            Command::Search {
+                index_name,
+                query,
+                formatter: _,
+            } => {
                 assert_eq!(index_name, long_name);
                 assert_eq!(query, long_query);
             }

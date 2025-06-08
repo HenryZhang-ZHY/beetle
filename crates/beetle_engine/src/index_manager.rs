@@ -1,13 +1,98 @@
 use anyhow::{Context, Result};
+use ignore::WalkBuilder;
 use std::fs;
 use std::path::PathBuf;
 use tantivy::schema::{Schema, STORED, TEXT};
 use tantivy::{Index, IndexWriter, ReloadPolicy};
-use walkdir::WalkDir;
 
 use crate::document::Document;
 use crate::query::{SearchOptions, SearchResult};
 use crate::utils::is_text_file;
+
+/// Options for controlling indexing behavior, particularly around git ignore rules
+///
+/// This struct allows fine-grained control over which files are included when indexing
+/// a repository. By default, it respects standard git ignore patterns to avoid indexing
+/// files that are typically not meant to be searched (like build artifacts, dependencies, etc.).
+///
+/// # Examples
+///
+/// ```rust
+/// use beetle_engine::IndexingOptions;
+///
+/// // Default behavior - respects .gitignore files
+/// let options = IndexingOptions::new();
+///
+/// // Ignore all git rules and index everything
+/// let options = IndexingOptions::ignore_git_rules();
+///
+/// // Custom configuration
+/// let options = IndexingOptions {
+///     respect_gitignore: true,
+///     include_hidden: true,    // Include hidden files even if not in .gitignore
+///     respect_git_global: false,  // Ignore global git config
+///     respect_git_exclude: true,
+/// };
+/// ```
+#[derive(Default, Debug, Clone)]
+pub struct IndexingOptions {
+    /// Whether to respect .gitignore files (default: true)
+    ///
+    /// When true, files and directories listed in .gitignore files will be skipped
+    /// during indexing. This is usually desired to avoid indexing build artifacts,
+    /// node_modules, .git directories, etc.
+    pub respect_gitignore: bool,
+
+    /// Whether to include hidden files (default: false)
+    ///
+    /// When false, files and directories starting with '.' are skipped unless
+    /// explicitly allowed by git ignore rules. When true, hidden files are included.
+    pub include_hidden: bool,
+
+    /// Whether to respect global git ignore (default: true)
+    ///
+    /// When true, patterns from the global git ignore file (usually ~/.gitignore_global)
+    /// are respected during indexing.
+    pub respect_git_global: bool,
+
+    /// Whether to respect .git/info/exclude (default: true)
+    ///
+    /// When true, patterns from .git/info/exclude are respected. This file contains
+    /// repository-specific ignore patterns that are not shared with other developers.
+    pub respect_git_exclude: bool,
+}
+
+impl IndexingOptions {
+    /// Create default indexing options
+    ///
+    /// Default behavior:
+    /// - Respects .gitignore files
+    /// - Excludes hidden files
+    /// - Respects global git ignore
+    /// - Respects .git/info/exclude
+    pub fn new() -> Self {
+        Self {
+            respect_gitignore: true,
+            include_hidden: false,
+            respect_git_global: true,
+            respect_git_exclude: true,
+        }
+    }
+
+    /// Create options that ignore all git ignore rules
+    ///
+    /// This will index all files in the repository, including those typically
+    /// ignored by git (build artifacts, dependencies, etc.). Use with caution
+    /// as this may result in very large indexes with many irrelevant files.
+    pub fn ignore_git_rules() -> Self {
+        Self {
+            respect_gitignore: false,
+            include_hidden: true,
+            respect_git_global: false,
+            respect_git_exclude: false,
+        }
+    }
+}
 
 /// Manages search indexes
 pub struct IndexManager {
@@ -27,8 +112,14 @@ impl IndexManager {
         Self { base_path }
     }
 
-    /// Create a new index from a repository
-    pub fn create_index(&self, index_name: &str, repo_path: &PathBuf) -> Result<IndexingStats> {
+    pub fn create_index(
+        &self,
+        index_name: &str,
+        repo_path: &PathBuf,
+        options: Option<IndexingOptions>,
+    ) -> Result<IndexingStats> {
+        let options = options.unwrap_or_else(IndexingOptions::new);
+
         let index_path = self.base_path.join(index_name);
         fs::create_dir_all(&index_path).with_context(|| {
             format!("Failed to create index directory: {}", index_path.display())
@@ -42,19 +133,35 @@ impl IndexManager {
             .writer(50_000_000)
             .with_context(|| "Failed to create index writer")?;
 
-        let stats = self.index_repository(&mut writer, &schema, repo_path)?;
+        let stats = self.index_repository(&mut writer, &schema, repo_path, &options)?;
 
         writer.commit().with_context(|| "Failed to commit index")?;
 
         Ok(stats)
     }
 
-    /// Index all files in a repository
+    /// Index all files in a repository with git ignore support
+    ///
+    /// This method walks through the repository directory and indexes all text files
+    /// while respecting git ignore patterns based on the provided options.
+    ///
+    /// The method uses the `ignore` crate which provides robust support for:
+    /// - .gitignore files at any level in the directory tree
+    /// - Global git ignore files
+    /// - .git/info/exclude files
+    /// - Hidden file filtering
+    ///
+    /// # Arguments
+    /// * `writer` - Tantivy index writer to add documents to
+    /// * `schema` - Index schema defining the document structure
+    /// * `repo_path` - Path to the repository root
+    /// * `options` - Options controlling which files to include/exclude
     fn index_repository(
         &self,
         writer: &mut IndexWriter,
         schema: &Schema,
         repo_path: &PathBuf,
+        options: &IndexingOptions,
     ) -> Result<IndexingStats> {
         let title_field = schema.get_field("title")?;
         let body_field = schema.get_field("body")?;
@@ -62,12 +169,26 @@ impl IndexManager {
 
         let mut stats = IndexingStats::default();
 
-        for entry in WalkDir::new(repo_path)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.file_type().is_file())
-        {
+        // Use ignore crate to respect .gitignore files
+        let walker = WalkBuilder::new(repo_path)
+            .hidden(!options.include_hidden) // Include hidden files based on options
+            .git_ignore(options.respect_gitignore) // Respect .gitignore files
+            .git_global(options.respect_git_global) // Respect global git ignore
+            .git_exclude(options.respect_git_exclude) // Respect .git/info/exclude
+            .build();
+
+        for entry in walker {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(_) => continue,
+            };
+
             let file_path = entry.path();
+
+            // Skip directories
+            if !file_path.is_file() {
+                continue;
+            }
 
             if !is_text_file(file_path) {
                 continue;
