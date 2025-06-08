@@ -2,6 +2,7 @@ mod document;
 mod formatter;
 mod index_manager;
 mod query;
+mod schema;
 mod utils;
 
 pub use document::Document;

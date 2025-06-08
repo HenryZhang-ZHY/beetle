@@ -2,11 +2,11 @@ use anyhow::{Context, Result};
 use ignore::WalkBuilder;
 use std::fs;
 use std::path::PathBuf;
-use tantivy::schema::{Schema, STORED, TEXT};
 use tantivy::{Index, IndexWriter, ReloadPolicy};
 
 use crate::document::Document;
 use crate::query::{SearchOptions, SearchResult};
+use crate::schema::IndexSchema;
 use crate::utils::is_text_file;
 
 /// Options for controlling indexing behavior, particularly around git ignore rules
@@ -125,7 +125,7 @@ impl IndexManager {
             format!("Failed to create index directory: {}", index_path.display())
         })?;
 
-        let schema = Self::create_schema();
+        let schema = IndexSchema::create();
         let index = Index::create_in_dir(&index_path, schema.clone())
             .with_context(|| "Failed to create tantivy index")?;
 
@@ -159,13 +159,13 @@ impl IndexManager {
     fn index_repository(
         &self,
         writer: &mut IndexWriter,
-        schema: &Schema,
+        schema: &tantivy::schema::Schema,
         repo_path: &PathBuf,
         options: &IndexingOptions,
     ) -> Result<IndexingStats> {
-        let title_field = schema.get_field("title")?;
-        let body_field = schema.get_field("body")?;
-        let path_field = schema.get_field("path")?;
+        let title_field = schema.get_field(IndexSchema::TITLE_FIELD)?;
+        let body_field = schema.get_field(IndexSchema::BODY_FIELD)?;
+        let path_field = schema.get_field(IndexSchema::PATH_FIELD)?;
 
         let mut stats = IndexingStats::default();
 
@@ -304,15 +304,6 @@ impl IndexManager {
             }
         }
         Ok(())
-    }
-
-    /// Create the schema for the index
-    fn create_schema() -> Schema {
-        let mut schema_builder = Schema::builder();
-        schema_builder.add_text_field("title", TEXT | STORED);
-        schema_builder.add_text_field("body", TEXT | STORED);
-        schema_builder.add_text_field("path", STORED);
-        schema_builder.build()
     }
 }
 
