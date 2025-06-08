@@ -1,7 +1,7 @@
 {
   "name": "beetle",
-  "displayName": "beetle",
-  "description": "source code search tool",
+  "displayName": "Beetle Code Search",
+  "description": "Lightning-fast source code search and indexing tool for VS Code",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.100.0"
@@ -9,15 +9,150 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "keywords": [
+    "search",
+    "code search",
+    "indexing",
+    "find"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "beetle.helloWorld",
-        "title": "Hello World"
+        "command": "beetle.search",
+        "title": "Search Code",
+        "category": "Beetle",
+        "icon": "$(search)"
+      },
+      {
+        "command": "beetle.createIndex",
+        "title": "Create Index",
+        "category": "Beetle",
+        "icon": "$(database)"
+      },
+      {
+        "command": "beetle.listIndexes",
+        "title": "List Indexes",
+        "category": "Beetle",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "beetle.deleteIndex",
+        "title": "Delete Index",
+        "category": "Beetle",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "beetle.openSearchPanel",
+        "title": "Open Search Panel",
+        "category": "Beetle",
+        "icon": "$(search-view-icon)"
+      },
+      {
+        "command": "beetle.refreshIndexes",
+        "title": "Refresh",
+        "icon": "$(refresh)"
       }
-    ]
+    ],
+    "views": {
+      "beetle": [
+        {
+          "id": "beetleSearch",
+          "name": "Search Results",
+          "when": "beetle.enabled"
+        },
+        {
+          "id": "beetleIndexes",
+          "name": "Indexes",
+          "when": "beetle.enabled"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "beetle",
+          "title": "Beetle",
+          "icon": "$(search-view-icon)"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "beetleSearch",
+        "contents": "No search results yet.\n[Search Code](command:beetle.search)"
+      },
+      {
+        "view": "beetleIndexes", 
+        "contents": "No indexes found.\n[Create Index](command:beetle.createIndex)\n[Refresh](command:beetle.refreshIndexes)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "beetle.search",
+          "when": "beetle.enabled"
+        },
+        {
+          "command": "beetle.createIndex",
+          "when": "beetle.enabled"
+        },
+        {
+          "command": "beetle.listIndexes",
+          "when": "beetle.enabled"
+        },
+        {
+          "command": "beetle.deleteIndex",
+          "when": "beetle.enabled"
+        },
+        {
+          "command": "beetle.openSearchPanel",
+          "when": "beetle.enabled"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "beetle.refreshIndexes",
+          "when": "view == beetleIndexes",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "beetle.deleteIndex",
+          "when": "view == beetleIndexes && viewItem == index",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Beetle",
+      "properties": {
+        "beetle.executablePath": {
+          "type": "string",
+          "default": "beetle",
+          "description": "Path to the beetle executable"
+        },
+        "beetle.defaultIndexPath": {
+          "type": "string",
+          "default": "",
+          "description": "Default path for storing indexes (leave empty to use system default)"
+        },
+        "beetle.maxResults": {
+          "type": "number",
+          "default": 50,
+          "description": "Maximum number of search results to display"
+        },
+        "beetle.autoCreateIndex": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically create an index for the current workspace"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",

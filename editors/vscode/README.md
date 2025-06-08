@@ -1,71 +1,132 @@
-# beetle README
+# Beetle VS Code Extension
 
-This is the README for your extension "beetle". After writing up a brief description, we recommend including the following sections.
+The Beetle VS Code extension brings lightning-fast source code search capabilities directly to your editor. Built on top of the powerful Beetle search engine, this extension allows you to create indexes of your codebases and perform blazing-fast searches without leaving VS Code.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **🚀 Lightning Fast Search**: Powered by Tantivy full-text search engine
+- **📁 Index Management**: Create, list, and manage multiple code indexes
+- **🔍 Integrated Search Panel**: Dedicated search interface in the activity bar
+- **📋 Search Results Navigation**: Click to jump directly to search results
+- **⚙️ Configurable Settings**: Customize executable path, index storage, and more
+- **🔄 Auto-Index Workspaces**: Optionally auto-create indexes for new workspaces
 
-For example if there is an image subfolder under your extension project workspace:
+## Installation
 
-\!\[feature X\]\(images/feature-x.png\)
+### Prerequisites
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+You need to have the Beetle CLI tool installed on your system. You can install it from source:
 
-## Requirements
+```bash
+git clone https://github.com/yourusername/beetle.git
+cd beetle
+cargo install --path apps/cli
+```
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+Make sure `beetle` is available in your PATH, or configure the executable path in the extension settings.
 
-## Extension Settings
+### Install Extension
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+1. Open VS Code
+2. Go to Extensions (Ctrl+Shift+X)
+3. Search for "Beetle Code Search"
+4. Click Install
 
-For example:
+## Quick Start
 
-This extension contributes the following settings:
+### 1. Create an Index
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+Before you can search, you need to create an index of your codebase:
 
-## Known Issues
+1. Open the Command Palette (Ctrl+Shift+P)
+2. Run "Beetle: Create Index"
+3. Enter a name for your index
+4. Enter the path to your codebase (defaults to current workspace)
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+### 2. Search Your Code
 
-## Release Notes
+Once you have an index:
 
-Users appreciate release notes as you update your extension.
+1. Click the Beetle icon in the activity bar, or
+2. Open Command Palette and run "Beetle: Search Code"
+3. Select an index to search
+4. Enter your search query
+5. Browse results in the search panel
 
-### 1.0.0
+## Commands
 
-Initial release of ...
+- **Beetle: Search Code** - Search across your indexed codebases
+- **Beetle: Create Index** - Create a new search index
+- **Beetle: List Indexes** - View all available indexes
+- **Beetle: Delete Index** - Remove an index (when supported)
+- **Beetle: Open Search Panel** - Open the Beetle activity panel
 
-### 1.0.1
+## Configuration
 
-Fixed issue #.
+Configure Beetle through VS Code settings:
 
-### 1.1.0
+```json
+{
+  "beetle.executablePath": "beetle",
+  "beetle.defaultIndexPath": "/path/to/your/indexes",
+  "beetle.maxResults": 50,
+  "beetle.autoCreateIndex": false
+}
+```
 
-Added features X, Y, and Z.
+### Settings
 
----
+- **beetle.executablePath**: Path to the beetle executable (default: "beetle")
+- **beetle.defaultIndexPath**: Default directory for storing indexes
+- **beetle.maxResults**: Maximum number of search results to display
+- **beetle.autoCreateIndex**: Automatically create indexes for new workspaces
 
-## Following extension guidelines
+## Usage Tips
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+### Search Queries
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+Beetle supports various search patterns:
 
-## Working with Markdown
+- **Function names**: `function parseJSON`
+- **Multiple terms**: `Result Err unwrap`
+- **TODO comments**: `TODO FIXME`
+- **Error patterns**: `panic! unwrap() expect()`
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+### Best Practices
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+1. **Create separate indexes** for different projects
+2. **Use descriptive names** for your indexes
+3. **Keep indexes updated** by recreating them when your codebase changes significantly
+4. **Use specific search terms** for better results
 
-## For more information
+## Keyboard Shortcuts
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+No default keyboard shortcuts are provided, but you can set your own:
 
-**Enjoy!**
+1. Go to File > Preferences > Keyboard Shortcuts
+2. Search for "beetle"
+3. Assign shortcuts to your favorite commands
+
+## Troubleshooting
+
+### "Command not found: beetle"
+
+Make sure the Beetle CLI is installed and available in your PATH, or set the correct path in `beetle.executablePath`.
+
+### "No indexes found"
+
+Create an index first using "Beetle: Create Index" command.
+
+### Search returns no results
+
+- Verify your search terms
+- Make sure the index contains the files you're looking for
+- Try broader search terms
+
+## Contributing
+
+This extension is part of the Beetle project. Contributions are welcome!
+
+## License
+
+MIT License - see the main Beetle project for details.
