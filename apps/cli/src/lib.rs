@@ -1,6 +1,15 @@
-use beetle_engine::{create_index, list_indexes, search_index};
+use beetle_engine::{create_index, list_indexes, search_index, JsonFormatter, PlainTextFormatter, SearchOptions};
 use bpaf::*;
 use std::path::PathBuf;
+
+/// Output format for search results
+#[derive(Debug, Clone)]
+pub enum OutputFormat {
+    /// Plain text format (default)
+    Text,
+    /// JSON format
+    Json,
+}
 
 /// Command enum representing the different operations beetle can perform.
 ///
@@ -25,6 +34,7 @@ use std::path::PathBuf;
 /// let cmd = Command::Search {
 ///     index_name: "my_index".to_string(),
 ///     query: "function main".to_string(),
+///     formatter: beetle_cli::OutputFormat::Text,
 /// };
 /// ```
 #[derive(Debug, Clone)]
@@ -44,6 +54,8 @@ pub enum Command {
         index_name: String,
         /// Search query string
         query: String,
+        /// Output format for results
+        formatter: OutputFormat,
     },
     /// List all available indexes
     List,
@@ -76,9 +88,20 @@ pub fn search_command() -> OptionParser<Command> {
         .argument::<String>("QUERY")
         .help("Search query");
 
+    let formatter = short('f')
+        .long("formatter")
+        .argument::<String>("FORMAT")
+        .help("Output format: text (default) or json")
+        .parse(|s| match s.as_str() {
+            "text" => Ok(OutputFormat::Text),
+            "json" => Ok(OutputFormat::Json),
+            _ => Err("Invalid format. Use 'text' or 'json'"),
+        })
+        .fallback(OutputFormat::Text);
+
     let index_name = positional::<String>("INDEX_NAME").help("Name of the index to search");
 
-    construct!(Command::Search { query, index_name }).to_options()
+    construct!(Command::Search { query, formatter, index_name }).to_options()
 }
 
 pub fn list_command() -> OptionParser<Command> {
@@ -102,7 +125,7 @@ pub fn cli() -> OptionParser<Command> {
         .to_options()
         .descr("Beetle - A source code search tool")
         .header("Search and index source code repositories")
-        .footer("Examples:\n  beetle create myindex -p /path/to/repo -o /path/to/index\n  beetle search myindex -q \"function name\"\n  beetle list")
+        .footer("Examples:\n  beetle create myindex -p /path/to/repo -o /path/to/index\n  beetle search myindex -q \"function name\"\n  beetle search myindex -q \"function name\" --formatter json\n  beetle list")
 }
 
 /// Execute a command and return the formatted output string.
@@ -134,15 +157,37 @@ pub fn execute_command(command: Command) -> String {
             index_name,
             repo_path,
             output_path,
-        } => match create_index(&index_name, &repo_path, &output_path) {
+        } => match create_index(&index_name, &repo_path, &output_path, &PlainTextFormatter) {
             Ok(message) => message,
             Err(e) => format!("Error creating index: {}", e),
         },
-        Command::Search { index_name, query } => match search_index(&index_name, &query) {
-            Ok(results) => results,
-            Err(e) => format!("Error searching index: {}", e),
-        },
-        Command::List => match list_indexes() {
+        Command::Search { index_name, query, formatter } => {
+            match formatter {
+                OutputFormat::Text => {
+                    match search_index(
+                        &index_name,
+                        &query,
+                        SearchOptions::default(),
+                        &PlainTextFormatter,
+                    ) {
+                        Ok(results) => results,
+                        Err(e) => format!("Error searching index: {}", e),
+                    }
+                },
+                OutputFormat::Json => {
+                    match search_index(
+                        &index_name,
+                        &query,
+                        SearchOptions::default(),
+                        &JsonFormatter::new(true), // Use pretty JSON
+                    ) {
+                        Ok(results) => results,
+                        Err(e) => format!("Error searching index: {}", e),
+                    }
+                }
+            }
+        }
+        Command::List => match list_indexes(&PlainTextFormatter) {
             Ok(list) => list,
             Err(e) => format!("Error listing indexes: {}", e),
         },
@@ -182,13 +227,15 @@ mod tests {
         let command = Command::Search {
             index_name: "my_index".to_string(),
             query: "function main".to_string(),
+            formatter: OutputFormat::Text,
         };
 
         // Test that command is created correctly
         match command {
-            Command::Search { index_name, query } => {
+            Command::Search { index_name, query, formatter } => {
                 assert_eq!(index_name, "my_index");
                 assert_eq!(query, "function main");
+                matches!(formatter, OutputFormat::Text);
             }
             _ => panic!("Expected Search command"),
         }
@@ -231,6 +278,7 @@ mod tests {
         let command = Command::Search {
             index_name: "debug_test".to_string(),
             query: "test query".to_string(),
+            formatter: OutputFormat::Json,
         };
 
         let debug_output = format!("{:?}", command);
@@ -245,11 +293,12 @@ mod tests {
         let command = Command::Search {
             index_name: "".to_string(),
             query: "".to_string(),
+            formatter: OutputFormat::Text,
         };
 
         // Test that empty strings are handled
         match command {
-            Command::Search { index_name, query } => {
+            Command::Search { index_name, query, formatter: _ } => {
                 assert_eq!(index_name, "");
                 assert_eq!(query, "");
             }
@@ -265,12 +314,44 @@ mod tests {
         let command = Command::Search {
             index_name: long_name.clone(),
             query: long_query.clone(),
+            formatter: OutputFormat::Json,
         };
 
         match command {
-            Command::Search { index_name, query } => {
+            Command::Search { index_name, query, formatter: _ } => {
                 assert_eq!(index_name, long_name);
                 assert_eq!(query, long_query);
+            }
+            _ => panic!("Expected Search command"),
+        }
+    }
+
+    #[test]
+    fn test_formatter_options() {
+        // Test text formatter
+        let text_command = Command::Search {
+            index_name: "test".to_string(),
+            query: "test".to_string(),
+            formatter: OutputFormat::Text,
+        };
+
+        match text_command {
+            Command::Search { formatter, .. } => {
+                matches!(formatter, OutputFormat::Text);
+            }
+            _ => panic!("Expected Search command"),
+        }
+
+        // Test JSON formatter
+        let json_command = Command::Search {
+            index_name: "test".to_string(),
+            query: "test".to_string(),
+            formatter: OutputFormat::Json,
+        };
+
+        match json_command {
+            Command::Search { formatter, .. } => {
+                matches!(formatter, OutputFormat::Json);
             }
             _ => panic!("Expected Search command"),
         }

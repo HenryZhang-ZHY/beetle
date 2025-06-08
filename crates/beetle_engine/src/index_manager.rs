@@ -7,7 +7,7 @@ use walkdir::WalkDir;
 
 use crate::document::Document;
 use crate::query::{SearchOptions, SearchResult};
-use crate::utils::{format_size, is_text_file};
+use crate::utils::is_text_file;
 
 /// Manages search indexes
 pub struct IndexManager {
@@ -28,7 +28,7 @@ impl IndexManager {
     }
 
     /// Create a new index from a repository
-    pub fn create_index(&self, index_name: &str, repo_path: &PathBuf) -> Result<String> {
+    pub fn create_index(&self, index_name: &str, repo_path: &PathBuf) -> Result<IndexingStats> {
         let index_path = self.base_path.join(index_name);
         fs::create_dir_all(&index_path).with_context(|| {
             format!("Failed to create index directory: {}", index_path.display())
@@ -46,14 +46,7 @@ impl IndexManager {
 
         writer.commit().with_context(|| "Failed to commit index")?;
 
-        Ok(format!(
-            "Successfully created index '{}':\n  Index path: {}\n  Files indexed: {}\n  Total content size: {}\n  Repository path: {}",
-            index_name,
-            index_path.display(),
-            stats.file_count,
-            format_size(stats.total_size),
-            repo_path.display()
-        ))
+        Ok(stats)
     }
 
     /// Index all files in a repository
@@ -114,7 +107,7 @@ impl IndexManager {
         index_name: &str,
         query_str: &str,
         options: SearchOptions,
-    ) -> Result<String> {
+    ) -> Result<Vec<SearchResult>> {
         let index_path = self.find_index(index_name)?;
         let index = Index::open_in_dir(&index_path)
             .with_context(|| format!("Failed to open index at: {}", index_path.display()))?;
@@ -122,11 +115,11 @@ impl IndexManager {
         let searcher = crate::query::create_searcher(&index)?;
         let results = crate::query::search(&index, &searcher, query_str, options)?;
 
-        self.format_search_results(query_str, results)
+        Ok(results)
     }
 
     /// List all available indexes
-    pub fn list_indexes(&self) -> Result<String> {
+    pub fn list_indexes(&self) -> Result<Vec<IndexInfo>> {
         let search_paths = vec![
             self.base_path.join("indexes"),
             self.base_path.join("indices"),
@@ -141,11 +134,7 @@ impl IndexManager {
             }
         }
 
-        if found_indexes.is_empty() {
-            return Ok("No indexes found. Create one with: beetle create <index_name> -p <repo_path> -o <output_path>".to_string());
-        }
-
-        self.format_index_list(found_indexes)
+        Ok(found_indexes)
     }
 
     /// Find an index by name
@@ -172,7 +161,7 @@ impl IndexManager {
     fn scan_directory_for_indexes(
         &self,
         dir: &PathBuf,
-        indexes: &mut Vec<(String, PathBuf, IndexMetadata)>,
+        indexes: &mut Vec<IndexInfo>,
     ) -> Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
@@ -186,7 +175,11 @@ impl IndexManager {
                     .to_string();
 
                 let metadata = IndexMetadata::from_path(&path)?;
-                indexes.push((index_name, path, metadata));
+                indexes.push(IndexInfo {
+                    name: index_name,
+                    path,
+                    metadata,
+                });
             }
         }
         Ok(())
@@ -200,50 +193,27 @@ impl IndexManager {
         schema_builder.add_text_field("path", STORED);
         schema_builder.build()
     }
-
-    /// Format search results for display
-    fn format_search_results(&self, query: &str, results: Vec<SearchResult>) -> Result<String> {
-        if results.is_empty() {
-            return Ok(format!("No results found for query: '{}'", query));
-        }
-
-        let mut output = format!("Found {} results for query '{}':\n\n", results.len(), query);
-
-        for result in results {
-            output.push_str(&format!(
-                "📄 {} (score: {:.2})\n   Path: {}\n   Preview: {}\n\n",
-                result.title, result.score, result.path, result.snippet
-            ));
-        }
-
-        Ok(output)
-    }
-
-    /// Format index list for display
-    fn format_index_list(&self, indexes: Vec<(String, PathBuf, IndexMetadata)>) -> Result<String> {
-        let mut result = format!("Found {} index(es):\n\n", indexes.len());
-
-        for (name, path, metadata) in indexes {
-            result.push_str(&format!(
-                "📂 {}\n   Path: {}\n   Documents: {}\n   Size: {}\n\n",
-                name,
-                path.display(),
-                metadata.doc_count,
-                format_size(metadata.size_bytes)
-            ));
-        }
-
-        Ok(result)
-    }
 }
 
-#[derive(Default)]
-struct IndexingStats {
-    file_count: u32,
-    total_size: u64,
+#[derive(Default, Debug, Clone)]
+pub struct IndexingStats {
+    pub file_count: u32,
+    pub total_size: u64,
+    pub index_name: String,
+    pub index_path: PathBuf,
+    pub repo_path: PathBuf,
+}
+
+/// Information about an index
+#[derive(Debug, Clone)]
+pub struct IndexInfo {
+    pub name: String,
+    pub path: PathBuf,
+    pub metadata: IndexMetadata,
 }
 
 /// Metadata about an index
+#[derive(Debug, Clone)]
 pub struct IndexMetadata {
     pub doc_count: u64,
     pub size_bytes: u64,

@@ -1,36 +1,52 @@
 mod document;
+mod formatter;
 mod index_manager;
 mod query;
 mod utils;
 
 pub use document::Document;
-pub use index_manager::{IndexManager, IndexMetadata};
+pub use formatter::{JsonFormatter, PlainTextFormatter, ResultFormatter};
+pub use index_manager::{IndexInfo, IndexManager, IndexMetadata, IndexingStats};
 pub use query::{SearchOptions, SearchResult};
 
 use anyhow::Result;
 use std::path::PathBuf;
 
 /// Create a new search index from a repository
-pub fn create_index(
+pub fn create_index<F: ResultFormatter>(
     index_name: &str,
     repo_path: &PathBuf,
     output_path: &PathBuf,
+    formatter: &F,
 ) -> Result<String> {
     let manager = IndexManager::new(output_path.clone());
-    manager.create_index(index_name, repo_path)
+    let mut stats = manager.create_index(index_name, repo_path)?;
+
+    // Update stats with the actual paths used
+    stats.index_name = index_name.to_string();
+    stats.index_path = output_path.join(index_name);
+    stats.repo_path = repo_path.clone();
+
+    formatter.format_indexing_stats(&stats)
 }
 
 /// Search an existing index
-pub fn search_index(index_name: &str, query_str: &str) -> Result<String> {
+pub fn search_index<F: ResultFormatter>(
+    index_name: &str,
+    query_str: &str,
+    options: SearchOptions,
+    formatter: &F,
+) -> Result<String> {
     let manager = IndexManager::default();
-    let options = SearchOptions::default();
-    manager.search(index_name, query_str, options)
+    let results = manager.search(index_name, query_str, options)?;
+    formatter.format_search_results(query_str, &results)
 }
 
 /// List all available indexes
-pub fn list_indexes() -> Result<String> {
+pub fn list_indexes<F: ResultFormatter>(formatter: &F) -> Result<String> {
     let manager = IndexManager::default();
-    manager.list_indexes()
+    let indexes = manager.list_indexes()?;
+    formatter.format_index_list(&indexes)
 }
 
 #[cfg(test)]
@@ -105,29 +121,10 @@ pub mod test_utils {
     }
 
     /// Search an in-memory index for testing
-    pub fn search_memory_index(index: &Index, query_str: &str) -> Result<String> {
+    pub fn search_memory_index(index: &Index, query_str: &str) -> Result<Vec<SearchResult>> {
         let searcher = query::create_searcher(index)?;
         let options = query::SearchOptions::default();
-        let results = query::search(index, &searcher, query_str, options)?;
-
-        if results.is_empty() {
-            return Ok(format!("No results found for query: '{}'", query_str));
-        }
-
-        let mut output = format!(
-            "Found {} results for query '{}':\n\n",
-            results.len(),
-            query_str
-        );
-
-        for result in results {
-            output.push_str(&format!(
-                "📄 {} (score: {:.2})\n   Path: {}\n\n",
-                result.title, result.score, result.path
-            ));
-        }
-
-        Ok(output)
+        query::search(index, &searcher, query_str, options)
     }
 
     #[test]
@@ -156,22 +153,52 @@ pub mod test_utils {
             ),
         ];
 
-        let index = create_memory_index_with_documents(test_files);
+        let index = create_memory_index_with_documents(test_files).unwrap();
+        let results = search_memory_index(&index, "main").unwrap();
+
+        assert!(!results.is_empty(), "Should find results for 'main'");
+        assert_eq!(results[0].title, "main.rs", "Should find main.rs");
         assert!(
-            index.is_ok(),
-            "Should be able to create index with documents"
+            results[0].snippet.contains("main"),
+            "Snippet should contain 'main'"
         );
+    }
 
-        if let Ok(index) = index {
-            let search_result = search_memory_index(&index, "main");
-            assert!(search_result.is_ok(), "Should be able to search index");
+    #[test]
+    fn test_formatters() {
+        let results = vec![SearchResult {
+            title: "test.rs".to_string(),
+            path: "src/test.rs".to_string(),
+            score: 0.95,
+            snippet: "fn test() { ... }".to_string(),
+        }];
 
-            if let Ok(result) = search_result {
-                assert!(
-                    result.contains("main"),
-                    "Search result should contain 'main'"
-                );
-            }
-        }
+        // Test plain text formatter
+        let plain_formatter = PlainTextFormatter;
+        let plain_output = plain_formatter
+            .format_search_results("test", &results)
+            .unwrap();
+        assert!(plain_output.contains("test.rs"));
+        assert!(plain_output.contains("score: 0.95"));
+
+        // Test JSON formatter
+        let json_formatter = JsonFormatter::new(false);
+        let json_output = json_formatter
+            .format_search_results("test", &results)
+            .unwrap();
+        assert!(json_output.contains("\"query\":\"test\""));
+        assert!(json_output.contains("\"count\":1"));
+    }
+
+    #[test]
+    fn test_api_with_formatters() {
+        // Test list_indexes with different formatters
+        let plain_formatter = PlainTextFormatter;
+        let json_formatter = JsonFormatter::new(false);
+
+        // These tests would require actual indexes to exist
+        // Just testing that the API compiles correctly
+        let _ = list_indexes(&plain_formatter);
+        let _ = list_indexes(&json_formatter);
     }
 }
