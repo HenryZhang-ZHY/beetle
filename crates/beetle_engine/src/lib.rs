@@ -8,7 +8,7 @@ mod utils;
 pub use document::Document;
 pub use formatter::{JsonFormatter, PlainTextFormatter, ResultFormatter};
 pub use index_manager::{IndexInfo, IndexManager, IndexMetadata, IndexingOptions, IndexingStats};
-pub use query::{SearchOptions, SearchResult};
+pub use query::{QueryOptions, QueryResult};
 
 use anyhow::Result;
 use std::path::PathBuf;
@@ -36,7 +36,7 @@ pub fn create_index<F: ResultFormatter>(
 pub fn search_index<F: ResultFormatter>(
     index_name: &str,
     query_str: &str,
-    options: SearchOptions,
+    options: QueryOptions,
     formatter: &F,
 ) -> Result<String> {
     let manager = IndexManager::default();
@@ -123,9 +123,9 @@ pub mod test_utils {
     }
 
     /// Search an in-memory index for testing
-    pub fn search_memory_index(index: &Index, query_str: &str) -> Result<Vec<SearchResult>> {
+    pub fn search_memory_index(index: &Index, query_str: &str) -> Result<Vec<QueryResult>> {
         let searcher = query::create_searcher(index)?;
-        let options = query::SearchOptions::default();
+        let options = query::QueryOptions::default();
         query::search(index, &searcher, query_str, options)
     }
 
@@ -168,7 +168,7 @@ pub mod test_utils {
 
     #[test]
     fn test_formatters() {
-        let results = vec![SearchResult {
+        let results = vec![QueryResult {
             title: "test.rs".to_string(),
             path: "src/test.rs".to_string(),
             score: 0.95,

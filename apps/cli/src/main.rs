@@ -1,7 +1,9 @@
-use beetle_cli::{cli, execute_command};
+mod result;
 
-fn main() {
-    let command = cli().run();
-    let output = execute_command(command);
-    println!("{}", output);
+use beetle::cli::{beetle_command, BeetleRunner, CliRunResult, Runner};
+
+fn main() -> CliRunResult {
+    let command = beetle_command().run();
+
+    BeetleRunner::new(command).run()
 }

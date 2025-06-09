@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use tantivy::{Index, IndexWriter, ReloadPolicy};
 
 use crate::document::Document;
-use crate::query::{SearchOptions, SearchResult};
+use crate::query::{QueryOptions, QueryResult};
 use crate::schema::IndexSchema;
 use crate::utils::is_text_file;
 
@@ -227,8 +227,8 @@ impl IndexManager {
         &self,
         index_name: &str,
         query_str: &str,
-        options: SearchOptions,
-    ) -> Result<Vec<SearchResult>> {
+        options: QueryOptions,
+    ) -> Result<Vec<QueryResult>> {
         let index_path = self.find_index(index_name)?;
         let index = Index::open_in_dir(&index_path)
             .with_context(|| format!("Failed to open index at: {}", index_path.display()))?;

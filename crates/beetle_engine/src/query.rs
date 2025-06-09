@@ -8,12 +8,12 @@ use crate::utils::extract_snippet;
 
 /// Options for search queries
 #[derive(Clone)]
-pub struct SearchOptions {
+pub struct QueryOptions {
     pub limit: usize,
     pub snippet_length: usize,
 }
 
-impl Default for SearchOptions {
+impl Default for QueryOptions {
     fn default() -> Self {
         Self {
             limit: 10,
@@ -23,7 +23,7 @@ impl Default for SearchOptions {
 }
 
 /// Represents a search result
-pub struct SearchResult {
+pub struct QueryResult {
     pub title: String,
     pub path: String,
     pub snippet: String,
@@ -46,8 +46,8 @@ pub fn search(
     index: &Index,
     searcher: &Searcher,
     query_str: &str,
-    options: SearchOptions,
-) -> Result<Vec<SearchResult>> {
+    options: QueryOptions,
+) -> Result<Vec<QueryResult>> {
     let schema = index.schema();
     let title_field = schema.get_field("title")?;
     let body_field = schema.get_field("body")?;
@@ -71,7 +71,7 @@ pub fn search(
         let document = Document::from_tantivy_doc(&retrieved_doc, &schema)?;
         let snippet = extract_snippet(&document.body, query_str, options.snippet_length);
 
-        results.push(SearchResult {
+        results.push(QueryResult {
             title: document.title,
             path: document.path,
             snippet,
