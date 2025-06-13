@@ -3,22 +3,20 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as os from 'os';
 import { spawn } from 'child_process';
 
 // Interfaces for Beetle data structures
 interface SearchResult {
-	file_path: string;
-	line_number: number;
-	content: string;
-	relevance_score: number;
+	path: string;
+	score: number;
+	snippet: string;
 }
 
 interface BeetleIndex {
 	name: string;
-	path: string;
-	created_at: string;
-	file_count: number;
+	path?: string;
+	created_at?: string;
+	file_count?: number;
 }
 
 // Tree data providers
@@ -29,7 +27,7 @@ class SearchResultProvider implements vscode.TreeDataProvider<SearchResultItem> 
 	private results: SearchResult[] = [];
 	private query: string = '';
 
-	constructor() {}
+	constructor() { }
 
 	refresh(): void {
 		this._onDidChangeTreeData.fire();
@@ -61,26 +59,26 @@ class SearchResultItem extends vscode.TreeItem {
 		public readonly result: SearchResult,
 		public readonly collapsibleState: vscode.TreeItemCollapsibleState
 	) {
-		super(`${path.basename(result.file_path)}:${result.line_number}`, collapsibleState);
-		
-		this.tooltip = `${result.file_path}:${result.line_number}\nScore: ${result.relevance_score}`;
-		this.description = result.content.trim().substring(0, 50) + '...';
-		this.resourceUri = vscode.Uri.file(result.file_path);
-		
+		super(path.basename(result.path), collapsibleState);
+
+		this.tooltip = `${result.path}\nScore: ${result.score}`;
+		this.description = result.snippet.trim().substring(0, 50) + '...';
+		this.resourceUri = vscode.Uri.file(result.path);
+
 		this.command = {
 			command: 'vscode.open',
 			title: 'Open File',
 			arguments: [
-				vscode.Uri.file(result.file_path),
+				vscode.Uri.file(result.path),
 				{
 					selection: new vscode.Range(
-						result.line_number - 1, 0,
-						result.line_number - 1, result.content.length
+						1, 0,
+						1, 100
 					)
 				}
 			]
 		};
-		
+
 		this.iconPath = new vscode.ThemeIcon('file-code');
 	}
 }
@@ -90,9 +88,11 @@ class IndexProvider implements vscode.TreeDataProvider<IndexItem> {
 	readonly onDidChangeTreeData: vscode.Event<IndexItem | undefined | void> = this._onDidChangeTreeData.event;
 
 	private indexes: BeetleIndex[] = [];
+	private beetleService: BeetleService;
 
-	constructor() {
-		this.loadIndexes();
+	constructor(beetleService: BeetleService) {
+		this.beetleService = beetleService;
+		this.refresh();
 	}
 
 	refresh(): void {
@@ -116,55 +116,22 @@ class IndexProvider implements vscode.TreeDataProvider<IndexItem> {
 
 	private async loadIndexes(): Promise<void> {
 		try {
-			const result = await this.executeBeetleCommand(['list']);
-			if (result.success) {
-				// Parse the list output (assuming JSON format)
-				try {
-					this.indexes = JSON.parse(result.output);
-				} catch {
-					// If not JSON, parse as text
-					this.indexes = this.parseTextIndexList(result.output);
-				}
+			const result = await this.beetleService.listIndexes();
+			if (result.length > 0) {
+				this.indexes = result.map(index => ({
+					name: index.name,
+					path: index.path || '',
+					created_at: index.created_at || new Date().toISOString(),
+					file_count: index.file_count || 0
+				}));
+			} else {
+				this.indexes = [];
+				vscode.window.showInformationMessage('No indexes found. Create one to start using Beetle.');
 			}
 		} catch (error) {
 			console.error('Failed to load indexes:', error);
 			this.indexes = [];
 		}
-	}
-
-	private parseTextIndexList(output: string): BeetleIndex[] {
-		const lines = output.split('\n').filter(line => line.trim());
-		return lines.map(line => ({
-			name: line.trim(),
-			path: '',
-			created_at: '',
-			file_count: 0
-		}));
-	}
-
-	private async executeBeetleCommand(args: string[]): Promise<{success: boolean, output: string}> {
-		return new Promise((resolve) => {
-			const beetlePath = vscode.workspace.getConfiguration('beetle').get<string>('executablePath', 'beetle');
-			const process = spawn(beetlePath, args, { shell: true });
-			
-			let output = '';
-			let error = '';
-
-			process.stdout.on('data', (data: Buffer) => {
-				output += data.toString();
-			});
-
-			process.stderr.on('data', (data: Buffer) => {
-				error += data.toString();
-			});
-
-			process.on('close', (code: number | null) => {
-				resolve({
-					success: code === 0,
-					output: code === 0 ? output : error
-				});
-			});
-		});
 	}
 }
 
@@ -174,9 +141,9 @@ class IndexItem extends vscode.TreeItem {
 		public readonly collapsibleState: vscode.TreeItemCollapsibleState
 	) {
 		super(index.name, collapsibleState);
-		
+
 		this.tooltip = `Path: ${index.path}\nCreated: ${index.created_at}\nFiles: ${index.file_count}`;
-		this.description = index.file_count > 0 ? `${index.file_count} files` : '';
+		this.description = (index.file_count ?? 0) > 0 ? `${index.file_count} files` : '';
 		this.contextValue = 'index';
 		this.iconPath = new vscode.ThemeIcon('database');
 	}
@@ -194,11 +161,10 @@ class BeetleService {
 		this.statusBarItem.show();
 	}
 
-	async executeBeetleCommand(args: string[]): Promise<{success: boolean, output: string}> {
+	async executeBeetleCommand(args: string[]): Promise<{ success: boolean, output: string }> {
 		return new Promise((resolve) => {
-			const beetlePath = vscode.workspace.getConfiguration('beetle').get<string>('executablePath', 'beetle');
-			const process = spawn(beetlePath, args, { shell: true });
-			
+			const process = spawn('beetle', args, { shell: true, });
+
 			let output = '';
 			let error = '';
 
@@ -221,8 +187,8 @@ class BeetleService {
 
 	async searchCode(indexName: string, query: string): Promise<SearchResult[]> {
 		try {
-			const result = await this.executeBeetleCommand(['search', indexName, '-q', query, '--formatter', 'json']);
-			
+			const result = await this.executeBeetleCommand(['search', '-i', indexName, '-q', query, '--format', 'json']);
+
 			if (result.success) {
 				try {
 					const parsed = JSON.parse(result.output);
@@ -244,7 +210,7 @@ class BeetleService {
 	private parseTextSearchResults(output: string): SearchResult[] {
 		const lines = output.split('\n').filter(line => line.trim());
 		const results: SearchResult[] = [];
-		
+
 		for (const line of lines) {
 			// Basic parsing for text format - this would need to be adjusted based on actual output format
 			const match = line.match(/^(.+):(\d+):(.+)$/);
@@ -257,26 +223,18 @@ class BeetleService {
 				});
 			}
 		}
-		
+
 		return results;
 	}
 
-	async createIndex(name: string, repoPath: string, outputPath?: string): Promise<boolean> {
+	async createIndex(name: string, repoPath: string): Promise<boolean> {
 		try {
-			const defaultIndexPath = vscode.workspace.getConfiguration('beetle').get<string>('defaultIndexPath', '');
-			const indexPath = outputPath || defaultIndexPath || path.join(os.homedir(), '.beetle', 'indexes');
-			
-			// Ensure the index directory exists
-			if (!fs.existsSync(indexPath)) {
-				fs.mkdirSync(indexPath, { recursive: true });
-			}
-
 			const result = await this.executeBeetleCommand([
-				'create', name, 
-				'-p', repoPath, 
-				'-o', indexPath
+				'new',
+				'--index', name,
+				'--path', repoPath
 			]);
-			
+
 			if (result.success) {
 				vscode.window.showInformationMessage(`Index "${name}" created successfully!`);
 				return true;
@@ -293,20 +251,12 @@ class BeetleService {
 	async listIndexes(): Promise<BeetleIndex[]> {
 		try {
 			const result = await this.executeBeetleCommand(['list']);
-			
+
 			if (result.success) {
-				try {
-					return JSON.parse(result.output);
-				} catch {
-					// Parse as text if JSON fails
-					const lines = result.output.split('\n').filter(line => line.trim());
-					return lines.map(line => ({
-						name: line.trim(),
-						path: '',
-						created_at: '',
-						file_count: 0
-					}));
-				}
+				return result.output.split('\n')
+					.filter(line => line.trim())
+					.map(line => ({ name: line.trim() }));
+
 			} else {
 				vscode.window.showErrorMessage(`Failed to list indexes: ${result.output}`);
 				return [];
@@ -314,6 +264,23 @@ class BeetleService {
 		} catch (error) {
 			vscode.window.showErrorMessage(`List indexes error: ${error}`);
 			return [];
+		}
+	}
+
+	async deleteIndex(name: string): Promise<boolean> {
+		try {
+			const result = await this.executeBeetleCommand(['delete', '--index', name]);
+
+			if (result.success) {
+				vscode.window.showInformationMessage(`Index "${name}" deleted successfully!`);
+				return true;
+			} else {
+				vscode.window.showErrorMessage(`Failed to delete index: ${result.output}`);
+				return false;
+			}
+		} catch (error) {
+			vscode.window.showErrorMessage(`Delete index error: ${error}`);
+			return false;
 		}
 	}
 
@@ -334,7 +301,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// Initialize services
 	beetleService = new BeetleService();
 	searchResultProvider = new SearchResultProvider();
-	indexProvider = new IndexProvider();
+	indexProvider = new IndexProvider(beetleService);
 
 	// Set context for when extension is enabled
 	vscode.commands.executeCommand('setContext', 'beetle.enabled', true);
@@ -370,14 +337,14 @@ export function activate(context: vscode.ExtensionContext) {
 				{ placeHolder: 'Select an index to search' }
 			);
 
-			if (!selectedIndex) {return;}
+			if (!selectedIndex) { return; }
 
 			const query = await vscode.window.showInputBox({
 				placeHolder: 'Enter your search query',
 				prompt: 'Search for code patterns, functions, or text'
 			});
 
-			if (!query) {return;}
+			if (!query) { return; }
 
 			vscode.window.withProgress({
 				location: vscode.ProgressLocation.Notification,
@@ -386,7 +353,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}, async () => {
 				const results = await beetleService.searchCode(selectedIndex, query);
 				searchResultProvider.updateResults(query, results);
-				
+
 				if (results.length === 0) {
 					vscode.window.showInformationMessage(`No results found for "${query}"`);
 				} else {
@@ -401,7 +368,7 @@ export function activate(context: vscode.ExtensionContext) {
 				prompt: 'Choose a unique name for your index'
 			});
 
-			if (!name) {return;}
+			if (!name) { return; }
 
 			// Default to current workspace if available
 			const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -410,13 +377,18 @@ export function activate(context: vscode.ExtensionContext) {
 				defaultPath = workspaceFolders[0].uri.fsPath;
 			}
 
-			const repoPath = await vscode.window.showInputBox({
-				placeHolder: 'Enter repository path',
-				prompt: 'Path to the codebase you want to index',
-				value: defaultPath
+			const folderUri = await vscode.window.showOpenDialog({
+				canSelectFolders: true,
+				canSelectFiles: false,
+				canSelectMany: false,
+				openLabel: 'Select Repository Folder',
+				defaultUri: defaultPath ? vscode.Uri.file(defaultPath) : undefined
 			});
 
-			if (!repoPath) {return;}
+			if (!folderUri || folderUri.length === 0) { return; }
+			const repoPath = folderUri[0].fsPath;
+
+			if (!repoPath) { return; }
 
 			// Validate path exists
 			if (!fs.existsSync(repoPath)) {
@@ -438,7 +410,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		vscode.commands.registerCommand('beetle.listIndexes', async () => {
 			const indexes = await beetleService.listIndexes();
-			
+
 			if (indexes.length === 0) {
 				vscode.window.showInformationMessage('No indexes found');
 				return;
@@ -446,7 +418,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			const items = indexes.map(idx => ({
 				label: idx.name,
-				description: idx.file_count > 0 ? `${idx.file_count} files` : '',
+				description: (idx.file_count ?? 0) > 0 ? `${idx.file_count} files` : '',
 				detail: idx.path
 			}));
 
@@ -457,7 +429,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		vscode.commands.registerCommand('beetle.deleteIndex', async (item?: IndexItem) => {
 			let indexName: string;
-			
+
 			if (item) {
 				indexName = item.index.name;
 			} else {
@@ -472,7 +444,7 @@ export function activate(context: vscode.ExtensionContext) {
 					{ placeHolder: 'Select an index to delete' }
 				);
 
-				if (!selected) {return;}
+				if (!selected) { return; }
 				indexName = selected;
 			}
 
@@ -499,7 +471,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Add all commands to subscriptions
 	commands.forEach(cmd => context.subscriptions.push(cmd));
-	
+
 	// Add service cleanup
 	context.subscriptions.push(beetleService);
 
@@ -508,17 +480,17 @@ export function activate(context: vscode.ExtensionContext) {
 	if (autoCreate && vscode.workspace.workspaceFolders) {
 		const workspaceFolder = vscode.workspace.workspaceFolders[0];
 		const workspaceName = path.basename(workspaceFolder.uri.fsPath);
-		
+
 		setTimeout(async () => {
 			const indexes = await beetleService.listIndexes();
 			const hasWorkspaceIndex = indexes.some(idx => idx.name === workspaceName);
-			
+
 			if (!hasWorkspaceIndex) {
 				const create = await vscode.window.showInformationMessage(
 					`Would you like to create a Beetle index for the "${workspaceName}" workspace?`,
 					'Create Index'
 				);
-				
+
 				if (create) {
 					await beetleService.createIndex(workspaceName, workspaceFolder.uri.fsPath);
 					indexProvider.refresh();
