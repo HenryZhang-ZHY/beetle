@@ -28,8 +28,6 @@ pub fn new_index(
     Ok(stats)
 }
 
-
-
 // Add test_utils module at the end of lib.rs
 #[cfg(test)]
 pub mod test_utils {

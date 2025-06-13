@@ -1,15 +1,15 @@
-mod new;
 mod delete;
-mod list;
-mod search;
-mod runner;
-mod update;
-mod option;
 mod formatter;
+mod list;
+mod new;
+mod option;
+mod runner;
+mod search;
+mod update;
 
 pub use runner::BeetleRunner;
 
-pub use formatter::{PlainTextFormatter, JsonFormatter, ResultFormatter};
+pub use formatter::{JsonFormatter, PlainTextFormatter, ResultFormatter};
 
 pub use option::index_name;
 
@@ -18,9 +18,9 @@ use std::path::PathBuf;
 
 use crate::cli::{CliRunResult, Runner};
 
-use new::new_command;
 use delete::delete_command;
 use list::list_command;
+use new::new_command;
 use search::search_command;
 use update::update_command;
 

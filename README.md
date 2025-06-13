@@ -30,12 +30,12 @@ cargo install --path apps/cli
 
 1. **Create an index** for your repository:
 ```bash
-beetle create myproject --path /path/to/repository
+beetle new -i myindex -p /path/to/your/repo
 ```
 
-2. **Query** your indexed code:
+2. **Search** your indexed code:
 ```bash
-beetle query --index myproject --search "function parseJSON"
+beetle search -i myindex -q "function_name"
 ```
 
 3. **List** all available indexes:
@@ -47,9 +47,9 @@ beetle list
 
 ### Commands
 
-#### `create` - Create a new index for a specified folder
+#### `new` - Create a new index for a specified folder
 ```bash
-beetle create <INDEX_NAME> --path <REPOSITORY_PATH>
+beetle new --index <INDEX_NAME> --path <PATH>
 ```
 - `INDEX_NAME`: A unique name for your index
 - `--path`: Path to the repository/codebase to index
@@ -60,9 +60,9 @@ beetle list
 ```
 Shows all indexes with their metadata stored in `~/.beetle`
 
-#### `query` - Search within an existing index
+#### `search` - Search within an existing index
 ```bash
-beetle query --index <INDEX_NAME> --search <QUERY>
+beetle search --index <INDEX_NAME> --query <SEARCH_QUERY>
 ```
 - `--index`: Name of the index to search
 - `--search`: Your search query (supports multiple terms)
@@ -87,19 +87,19 @@ beetle delete --index <INDEX_NAME>
 
 ```bash
 # Create an index for a Rust project
-beetle create rust-std --path ~/rust/library
+beetle new --index rust-std --path /path/to/rust/project
 
 # Search for specific functions
-beetle query --index rust-std --search "fn parse"
+beetle search --index rust-std --query "fn parse"
 
 # Search for error handling patterns
-beetle query --index myproject --search "Result Err unwrap"
+beetle search --index rust-std --query "Result Err unwrap"
 
 # Find TODO comments
-beetle query --index myproject --search "TODO FIXME"
+beetle search --index rust-std --query "TODO FIXME"
 
 # Update index with recent changes
-beetle update --index myproject --incremental
+beetle update --index rust-std --incremental
 
 # Remove an old index
 beetle delete --index old-project

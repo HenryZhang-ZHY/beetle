@@ -68,7 +68,8 @@ impl BeetleCommand {
         Self {
             cmd: Command::cargo_bin("beetle").unwrap(),
         }
-    }    fn new_index(mut self, name: &str, path: &Path, _output: &Path) -> Self {
+    }
+    fn new_index(mut self, name: &str, path: &Path, _output: &Path) -> Self {
         self.cmd
             .arg("new")
             .arg(format!("--path={}", path.display()))

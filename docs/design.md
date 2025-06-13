@@ -31,9 +31,9 @@ The following commands are available:
 
 | Command | Description |
 |---------|-------------|
-| `create` | Create a new index for a specified folder |
+| `new` | Create a new index for a specified folder |
 | `list` | Display all available indexes |
-| `query` | Search within an existing index |
+| `search` | Search within an existing index |
 | `delete` | Remove an index from the system |
 | `update` | Update an existing index with new changes or reindex |
 
@@ -41,13 +41,13 @@ The following commands are available:
 
 ```bash
 # Create an index for a repository
-beetle create my-index-01 --path /path/to/repository
+beetle new --index my-index-01 --path /path/to/repo
 
 # List all indexes
 beetle list
 
-# Query an existing index
-beetle query --index my-index-01 --search "function_name"
+# Search an existing index
+beetle search --index my-index-01 --query "function_name"
 
 # Incremental update an index
 beetle update --index my-index-01 --incremental

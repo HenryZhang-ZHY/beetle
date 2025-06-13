@@ -40,9 +40,6 @@ impl Document {
             .unwrap_or("Unknown path")
             .to_string();
 
-        Ok(Self {
-            content,
-            path,
-        })
+        Ok(Self { content, path })
     }
 }

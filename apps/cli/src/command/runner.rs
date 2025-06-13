@@ -2,8 +2,6 @@ use beetle_engine::{new_index, IndexManager, IndexingOptions};
 
 use std::path::PathBuf;
 
-use crate::command::new;
-
 use super::{
     BeetleCommand, CliRunResult, JsonFormatter, OutputFormat, PlainTextFormatter, ResultFormatter,
     Runner,
@@ -111,11 +109,26 @@ impl Runner for BeetleRunner {
             }
 
             BeetleCommand::Delete { index_name } => {
-                // TODO: Implement delete_index in beetle_engine
-                CliRunResult::PlainTextResult(format!(
-                    "Deleting index '{}' is not yet implemented",
-                    index_name
-                ))
+                let index_path: PathBuf = BeetleRunner::get_index_path(&index_name);
+
+                if index_path.exists() {
+                    if std::fs::remove_dir_all(&index_path).is_ok() {
+                        return CliRunResult::PlainTextResult(format!(
+                            "Index '{}' deleted successfully",
+                            index_name
+                        ));
+                    } else {
+                        return CliRunResult::PlainTextResult(format!(
+                            "Failed to delete index '{}'. Please check permissions.",
+                            index_name
+                        ));
+                    }
+                } else {
+                    return CliRunResult::PlainTextResult(format!(
+                        "Index '{}' does not exist",
+                        index_name
+                    ));
+                }
             }
             BeetleCommand::Update {
                 index_name,
