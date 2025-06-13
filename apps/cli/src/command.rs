@@ -47,7 +47,6 @@ pub enum BeetleCommand {
         /// Output format for results
         formatter: OutputFormat,
     },
-    /// List all available indexes
     List,
     /// Delete an existing index
     Delete {

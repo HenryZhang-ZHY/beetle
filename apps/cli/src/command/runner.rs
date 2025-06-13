@@ -1,7 +1,7 @@
 use std::env;
 
 use beetle_engine::{
-    new_index, list_indexes, search_index, IndexingOptions, JsonFormatter, PlainTextFormatter,
+    list_indexes, new_index, search_index, IndexingOptions, JsonFormatter, PlainTextFormatter,
     QueryOptions,
 };
 
@@ -89,10 +89,29 @@ impl Runner for BeetleRunner {
                     }
                 }
             }
-            BeetleCommand::List => match list_indexes(&PlainTextFormatter) {
-                Ok(list) => CliRunResult::PlainTextResult(list),
-                Err(e) => CliRunResult::PlainTextResult(format!("Error listing indexes: {}", e)),
-            },
+            BeetleCommand::List => {
+                let beetle_home = BeetleRunner::get_beetle_home();
+                let index_path = PathBuf::from(beetle_home).join("indexes");
+
+                let mut index_names = Vec::new();
+                if let Ok(entries) = std::fs::read_dir(&index_path) {
+                    for entry in entries.flatten() {
+                        if entry.file_type().map_or(false, |ft| ft.is_dir()) {
+                            if let Some(name) = entry.file_name().to_str() {
+                                index_names.push(name.to_string());
+                            }
+                        }
+                    }
+                }
+
+                if index_names.is_empty() {
+                    CliRunResult::PlainTextResult("No indexes found".to_string())
+                } else {
+                    let formatted_list = index_names.join("\n");
+                    CliRunResult::PlainTextResult(formatted_list)
+                }
+            }
+
             BeetleCommand::Delete { index_name } => {
                 // TODO: Implement delete_index in beetle_engine
                 CliRunResult::PlainTextResult(format!(

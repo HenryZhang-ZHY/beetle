@@ -159,7 +159,6 @@ pub mod test_utils {
         let results = search_memory_index(&index, "main").unwrap();
 
         assert!(!results.is_empty(), "Should find results for 'main'");
-        assert_eq!(results[0].title, "main.rs", "Should find main.rs");
         assert!(
             results[0].snippet.contains("main"),
             "Snippet should contain 'main'"
@@ -169,7 +168,6 @@ pub mod test_utils {
     #[test]
     fn test_formatters() {
         let results = vec![QueryResult {
-            title: "test.rs".to_string(),
             path: "src/test.rs".to_string(),
             score: 0.95,
             snippet: "fn test() { ... }".to_string(),
