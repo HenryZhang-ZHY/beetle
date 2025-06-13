@@ -1,12 +1,15 @@
 mod new;
 mod delete;
 mod list;
-mod query;
+mod search;
 mod runner;
 mod update;
 mod option;
+mod formatter;
 
 pub use runner::BeetleRunner;
+
+pub use formatter::{PlainTextFormatter, JsonFormatter, ResultFormatter};
 
 pub use option::index_name;
 
@@ -15,10 +18,10 @@ use std::path::PathBuf;
 
 use crate::cli::{CliRunResult, Runner};
 
-use new::new;
+use new::new_command;
 use delete::delete_command;
 use list::list_command;
-use query::query_command;
+use search::search_command;
 use update::update_command;
 
 /// Output format for search results
@@ -40,11 +43,8 @@ pub enum BeetleCommand {
     },
     /// Query an existing index
     Query {
-        /// Name of the index to query
         index_name: String,
-        /// Search query string
-        search: String,
-        /// Output format for results
+        query: String,
         formatter: OutputFormat,
     },
     List,
@@ -65,12 +65,12 @@ pub enum BeetleCommand {
 }
 
 pub fn beetle_command() -> OptionParser<BeetleCommand> {
-    let new = new()
+    let new = new_command()
         .command("new")
         .help("Create a new index for a specified folder");
 
-    let query = query_command()
-        .command("query")
+    let search = search_command()
+        .command("search")
         .help("Search within an existing index");
 
     let list = list_command()
@@ -85,7 +85,7 @@ pub fn beetle_command() -> OptionParser<BeetleCommand> {
         .command("update")
         .help("Update an existing index with new changes or reindex");
 
-    construct!([new, query, list, delete, update])
+    construct!([new, search, list, delete, update])
         .to_options()
         .descr("Beetle - Source Code Repository Indexing Tool")
         .header("Efficiently index and query source code repositories")
@@ -133,11 +133,11 @@ mod tests {
         match result.unwrap() {
             BeetleCommand::Query {
                 index_name,
-                search,
+                query,
                 formatter,
             } => {
                 assert_eq!(index_name, "my-index");
-                assert_eq!(search, "main function");
+                assert_eq!(query, "main function");
                 matches!(formatter, OutputFormat::Text);
             }
             _ => panic!("Expected Query command"),
@@ -303,10 +303,10 @@ mod tests {
 
         match result.unwrap() {
             BeetleCommand::Query {
-                index_name, search, ..
+                index_name, query, ..
             } => {
                 assert_eq!(index_name, "");
-                assert_eq!(search, "");
+                assert_eq!(query, "");
             }
             _ => panic!("Expected Query command"),
         }
@@ -328,8 +328,8 @@ mod tests {
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::Query { search, .. } => {
-                assert_eq!(search, "你好 world 🦀");
+            BeetleCommand::Query { query, .. } => {
+                assert_eq!(query, "你好 world 🦀");
             }
             _ => panic!("Expected Query command"),
         }

@@ -8,6 +8,8 @@ pub struct Document {
     pub path: String,
 }
 
+use crate::schema::IndexSchema;
+
 impl Document {
     pub fn new(content: String, path: String) -> Self {
         Self { content, path }
@@ -23,11 +25,11 @@ impl Document {
 
     /// Extract from Tantivy document
     pub fn from_tantivy_doc(doc: &TantivyDocument, schema: &Schema) -> Result<Self> {
-        let body_field = schema.get_field("body")?;
-        let path_field = schema.get_field("path")?;
+        let content_field = schema.get_field(IndexSchema::CONTENT_FIELD)?;
+        let path_field = schema.get_field(IndexSchema::PATH_FIELD)?;
 
         let content = doc
-            .get_first(body_field)
+            .get_first(content_field)
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();

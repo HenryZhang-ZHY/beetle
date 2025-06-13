@@ -1,13 +1,13 @@
 use anyhow::{Context, Result};
 use ignore::WalkBuilder;
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 use tantivy::{Index, IndexWriter, ReloadPolicy};
 
 use crate::document::Document;
-use crate::query::{QueryOptions, QueryResult};
 use crate::schema::IndexSchema;
-use crate::utils::is_text_file;
+use crate::search::SearchResult;
 
 /// Options for controlling indexing behavior, particularly around git ignore rules
 ///
@@ -96,7 +96,7 @@ impl IndexingOptions {
 
 /// Manages search indexes
 pub struct IndexManager {
-    index_path: PathBuf,
+    pub index_path: PathBuf,
 }
 
 impl Default for IndexManager {
@@ -114,14 +114,17 @@ impl IndexManager {
 
     pub fn new_index(
         &self,
-        index_name: &str,
+        _index_name: &str,
         path_to_be_indexed: &PathBuf,
         options: Option<IndexingOptions>,
     ) -> Result<IndexingStats> {
         let options = options.unwrap_or_else(IndexingOptions::new);
 
         fs::create_dir_all(&self.index_path).with_context(|| {
-            format!("Failed to create index directory: {}", &self.index_path.display())
+            format!(
+                "Failed to create index directory: {}",
+                &self.index_path.display()
+            )
         })?;
 
         let schema = IndexSchema::create();
@@ -193,9 +196,7 @@ impl IndexManager {
             }
 
             if let Ok(content) = fs::read_to_string(file_path) {
-                let absolute_path = file_path
-                    .to_string_lossy()
-                    .to_string();
+                let absolute_path = file_path.to_string_lossy().to_string();
 
                 let doc = Document::new(content.clone(), absolute_path);
                 writer.add_document(doc.to_tantivy_doc(content_field, path_field))?;
@@ -210,23 +211,6 @@ impl IndexManager {
         }
 
         Ok(stats)
-    }
-
-    /// Search an existing index
-    pub fn search(
-        &self,
-        index_name: &str,
-        query_str: &str,
-        options: QueryOptions,
-    ) -> Result<Vec<QueryResult>> {
-        let index_path = self.find_index(index_name)?;
-        let index = Index::open_in_dir(&index_path)
-            .with_context(|| format!("Failed to open index at: {}", index_path.display()))?;
-
-        let searcher = crate::query::create_searcher(&index)?;
-        let results = crate::query::search(&index, &searcher, query_str, options)?;
-
-        Ok(results)
     }
 
     /// List all available indexes
@@ -297,6 +281,21 @@ impl IndexManager {
     }
 }
 
+fn is_text_file(path: &Path) -> bool {
+    const BINARY_EXTENSIONS: &[&str] = &[
+        "exe", "dll", "so", "dylib", "bin", "obj", "o", "jpg", "jpeg", "png", "gif", "bmp", "ico",
+        "mp3", "mp4", "avi", "mov", "wav", "zip", "tar", "gz", "rar", "7z", "pdf", "doc", "docx",
+        "xls", "xlsx",
+    ];
+
+    if let Some(extension) = path.extension() {
+        let ext = extension.to_string_lossy().to_lowercase();
+        !BINARY_EXTENSIONS.contains(&ext.as_str())
+    } else {
+        true // Assume files without extensions might be text
+    }
+}
+
 #[derive(Default, Debug, Clone)]
 pub struct IndexingStats {
     pub file_count: u32,
@@ -354,5 +353,19 @@ impl IndexMetadata {
             .reload_policy(ReloadPolicy::OnCommitWithDelay)
             .try_into()?;
         Ok(reader.searcher().num_docs() as u64)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_text_file() {
+        assert!(is_text_file(Path::new("test.rs")));
+        assert!(is_text_file(Path::new("README.md")));
+        assert!(is_text_file(Path::new("file_without_extension")));
+        assert!(!is_text_file(Path::new("image.jpg")));
+        assert!(!is_text_file(Path::new("binary.exe")));
     }
 }

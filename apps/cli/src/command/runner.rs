@@ -1,13 +1,13 @@
-use std::env;
-
-use beetle_engine::{
-    list_indexes, new_index, search_index, IndexingOptions, JsonFormatter, PlainTextFormatter,
-    QueryOptions,
-};
+use beetle_engine::{new_index, IndexManager, IndexingOptions};
 
 use std::path::PathBuf;
 
-use super::{BeetleCommand, CliRunResult, OutputFormat, Runner};
+use crate::command::new;
+
+use super::{
+    BeetleCommand, CliRunResult, JsonFormatter, OutputFormat, PlainTextFormatter, ResultFormatter,
+    Runner,
+};
 
 pub struct BeetleRunner {
     options: BeetleCommand,
@@ -24,6 +24,11 @@ impl BeetleRunner {
 
         return beetle_home;
     }
+
+    fn get_index_path(index_name: &str) -> PathBuf {
+        let beetle_home = Self::get_beetle_home();
+        PathBuf::from(beetle_home).join("indexes").join(index_name)
+    }
 }
 
 impl Runner for BeetleRunner {
@@ -39,53 +44,46 @@ impl Runner for BeetleRunner {
                 index_name,
                 path_to_be_indexed,
             } => {
-                let beetle_home = BeetleRunner::get_beetle_home();
-                let index_path = PathBuf::from(beetle_home).join("indexes").join(&index_name);
+                let index_path: PathBuf = BeetleRunner::get_index_path(&index_name);
 
                 match new_index(
                     &index_name,
                     &path_to_be_indexed,
                     &index_path,
                     IndexingOptions::new(),
-                    &PlainTextFormatter,
                 ) {
-                    Ok(message) => CliRunResult::PlainTextResult(message),
+                    Ok(stats) => CliRunResult::PlainTextResult(
+                        PlainTextFormatter.format_indexing_stats(&stats),
+                    ),
                     Err(e) => CliRunResult::PlainTextResult(format!("Error creating index: {}", e)),
                 }
             }
             BeetleCommand::Query {
                 index_name,
-                search,
+                query,
                 formatter,
             } => {
+                let index_path: PathBuf = BeetleRunner::get_index_path(&index_name);
+                let index_manager = IndexManager::new(index_path);
+
+                let search_result = index_manager.search(&query);
+
                 match formatter {
                     OutputFormat::Text => {
-                        match search_index(
-                            &index_name,
-                            &search,
-                            QueryOptions::default(),
-                            &PlainTextFormatter,
-                        ) {
-                            Ok(results) => CliRunResult::PlainTextResult(results),
-                            Err(e) => CliRunResult::PlainTextResult(format!(
-                                "Error querying index: {}",
-                                e
-                            )),
-                        }
+                        let results = search_result.unwrap();
+                        let text_formatter = PlainTextFormatter;
+
+                        CliRunResult::PlainTextResult(
+                            text_formatter.format_search_results(&query, &results),
+                        )
                     }
                     OutputFormat::Json => {
-                        match search_index(
-                            &index_name,
-                            &search,
-                            QueryOptions::default(),
-                            &JsonFormatter::new(true), // Use pretty JSON
-                        ) {
-                            Ok(results) => CliRunResult::PlainTextResult(results),
-                            Err(e) => CliRunResult::PlainTextResult(format!(
-                                "Error querying index: {}",
-                                e
-                            )),
-                        }
+                        let results = search_result.unwrap();
+                        let json_formatter = JsonFormatter::new(true);
+
+                        CliRunResult::PlainTextResult(
+                            json_formatter.format_search_results(&query, &results),
+                        )
                     }
                 }
             }

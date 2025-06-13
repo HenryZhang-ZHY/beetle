@@ -1,40 +1,69 @@
-use std::path::Path;
+use anyhow::{Context, Result};
+use tantivy::collector::TopDocs;
+use tantivy::query::QueryParser;
+use tantivy::{Index, IndexReader, Searcher};
 
-/// Format file size in human readable format
-pub fn format_size(bytes: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
-    let mut size = bytes as f64;
-    let mut unit_index = 0;
+use crate::document::Document;
+use crate::schema::IndexSchema;
 
-    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-        size /= 1024.0;
-        unit_index += 1;
+use crate::index_manager::IndexManager;
+
+pub struct SearchResult {
+    pub path: String,
+    pub snippet: String,
+    pub score: f32,
+}
+
+impl IndexManager {
+    fn create_searcher(index: &Index) -> Result<Searcher> {
+        let reader: IndexReader = index
+            .reader_builder()
+            .reload_policy(tantivy::ReloadPolicy::OnCommitWithDelay)
+            .try_into()
+            .with_context(|| "Failed to create index reader")?;
+
+        Ok(reader.searcher())
     }
 
-    if unit_index == 0 {
-        format!("{} {}", bytes, UNITS[unit_index])
-    } else {
-        format!("{:.1} {}", size, UNITS[unit_index])
+    pub fn search(&self, query_str: &str) -> Result<Vec<SearchResult>> {
+        let index = Index::open_in_dir(&self.index_path)
+            .with_context(|| format!("Failed to open index at: {}", self.index_path.display()))?;
+
+        let searcher = IndexManager::create_searcher(&index)?;
+        let schema = index.schema();
+        let path_field = schema.get_field(IndexSchema::PATH_FIELD)?;
+        let content_field = schema.get_field(IndexSchema::CONTENT_FIELD)?;
+
+        let query_parser = QueryParser::for_index(&index, vec![path_field, content_field]);
+        let query = query_parser
+            .parse_query(query_str)
+            .with_context(|| format!("Failed to parse query: '{}'", query_str))?;
+
+        let top_docs = searcher
+            .search(&query, &TopDocs::with_limit(100000))
+            .with_context(|| "Failed to execute search")?;
+
+        let mut results = Vec::new();
+
+        for (score, doc_address) in top_docs {
+            let retrieved_doc = searcher
+                .doc(doc_address)
+                .with_context(|| "Failed to retrieve document")?;
+
+            let document = Document::from_tantivy_doc(&retrieved_doc, &schema)?;
+            let snippet = extract_snippet(&document.content, query_str, 100);
+
+            results.push(SearchResult {
+                path: document.path,
+                snippet,
+                score,
+            });
+        }
+
+        Ok(results)
     }
 }
 
-/// Check if a file is likely to be a text file based on its extension
-pub fn is_text_file(path: &Path) -> bool {
-    const BINARY_EXTENSIONS: &[&str] = &[
-        "exe", "dll", "so", "dylib", "bin", "obj", "o", "jpg", "jpeg", "png", "gif", "bmp", "ico",
-        "mp3", "mp4", "avi", "mov", "wav", "zip", "tar", "gz", "rar", "7z", "pdf", "doc", "docx",
-        "xls", "xlsx",
-    ];
-
-    if let Some(extension) = path.extension() {
-        let ext = extension.to_string_lossy().to_lowercase();
-        !BINARY_EXTENSIONS.contains(&ext.as_str())
-    } else {
-        true // Assume files without extensions might be text
-    }
-}
-
-/// Extract a snippet from text around the query terms
 pub fn extract_snippet(text: &str, query: &str, max_length: usize) -> String {
     let query_words: Vec<&str> = query
         .split_whitespace()
@@ -72,7 +101,6 @@ fn find_best_match_position(text: &str, query_words: &[&str]) -> Option<(usize, 
     best_pos.map(|pos| (pos, best_word_len))
 }
 
-/// Extract a snippet around a specific position
 fn extract_snippet_around_position(
     text: &str,
     pos: usize,
@@ -92,7 +120,6 @@ fn extract_snippet_around_position(
     format!("{}{}{}", prefix, snippet.trim(), suffix)
 }
 
-/// Clean up a snippet by removing excessive whitespace
 fn clean_snippet(snippet: &str) -> String {
     snippet
         .replace('\n', " ")
@@ -102,7 +129,6 @@ fn clean_snippet(snippet: &str) -> String {
         .join(" ")
 }
 
-/// Truncate text to a maximum length
 fn truncate_text(text: &str, max_length: usize) -> String {
     if text.len() > max_length {
         format!("{}...", &text[..max_length].trim())
@@ -116,25 +142,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_format_size() {
-        assert_eq!(format_size(512), "512 B");
-        assert_eq!(format_size(1024), "1.0 KB");
-        assert_eq!(format_size(1536), "1.5 KB");
-        assert_eq!(format_size(1048576), "1.0 MB");
-        assert_eq!(format_size(1073741824), "1.0 GB");
+    fn test_extract_snippet_1() {
+        let text = "This is a long piece of text that contains the word function somewhere in the middle and we want to extract a snippet around it.";
+        let query = "function";
+        let snippet = extract_snippet(text, query, 100);
+
+        assert!(
+            snippet.contains("function"),
+            "Snippet should contain the query word"
+        );
+        assert!(snippet.len() <= 110, "Snippet should be reasonably sized");
     }
 
     #[test]
-    fn test_is_text_file() {
-        assert!(is_text_file(Path::new("test.rs")));
-        assert!(is_text_file(Path::new("README.md")));
-        assert!(is_text_file(Path::new("file_without_extension")));
-        assert!(!is_text_file(Path::new("image.jpg")));
-        assert!(!is_text_file(Path::new("binary.exe")));
-    }
-
-    #[test]
-    fn test_extract_snippet() {
+    fn test_extract_snippet_2() {
         let text = "This is a long piece of text that contains the word function somewhere in the middle and we want to extract a snippet around it.";
         let query = "function";
         let snippet = extract_snippet(text, query, 50);

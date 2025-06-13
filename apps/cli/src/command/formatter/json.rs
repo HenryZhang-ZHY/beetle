@@ -1,4 +1,4 @@
-use super::{IndexInfo, IndexingStats, QueryResult, Result, ResultFormatter};
+use super::{IndexInfo, IndexingStats, ResultFormatter, SearchResult};
 
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +28,7 @@ impl JsonFormatter {
 }
 
 impl ResultFormatter for JsonFormatter {
-    fn format_search_results(&self, query: &str, results: &[QueryResult]) -> Result<String> {
+    fn format_search_results(&self, query: &str, results: &[SearchResult]) -> String {
         let output = SearchOutput {
             query: query.to_string(),
             count: results.len(),
@@ -43,13 +43,13 @@ impl ResultFormatter for JsonFormatter {
         };
 
         if self.pretty {
-            Ok(serde_json::to_string_pretty(&output)?)
+            serde_json::to_string_pretty(&output).unwrap_or("".to_string())
         } else {
-            Ok(serde_json::to_string(&output)?)
+            serde_json::to_string(&output).unwrap_or("".to_string())
         }
     }
 
-    fn format_index_list(&self, indexes: &[IndexInfo]) -> Result<String> {
+    fn format_index_list(&self, indexes: &[IndexInfo]) -> String {
         let output = serde_json::json!({
             "count": indexes.len(),
             "indexes": indexes.iter().map(|index| {
@@ -63,13 +63,13 @@ impl ResultFormatter for JsonFormatter {
         });
 
         if self.pretty {
-            Ok(serde_json::to_string_pretty(&output)?)
+            serde_json::to_string_pretty(&output).unwrap_or("".to_string())
         } else {
-            Ok(serde_json::to_string(&output)?)
+            serde_json::to_string(&output).unwrap_or("".to_string())
         }
     }
 
-    fn format_indexing_stats(&self, stats: &IndexingStats) -> Result<String> {
+    fn format_indexing_stats(&self, stats: &IndexingStats) -> String {
         let output = serde_json::json!({
             "success": true,
             "index_name": stats.index_name,
@@ -80,9 +80,9 @@ impl ResultFormatter for JsonFormatter {
         });
 
         if self.pretty {
-            Ok(serde_json::to_string_pretty(&output)?)
+            serde_json::to_string_pretty(&output).unwrap_or("".to_string())
         } else {
-            Ok(serde_json::to_string(&output)?)
+            serde_json::to_string(&output).unwrap_or("".to_string())
         }
     }
 }

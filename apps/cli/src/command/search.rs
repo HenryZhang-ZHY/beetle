@@ -1,14 +1,11 @@
-use super::{BeetleCommand, OutputFormat};
+use super::{index_name, BeetleCommand, OutputFormat};
 use bpaf::*;
 
-pub fn query_command() -> OptionParser<BeetleCommand> {
-    let search = long("search")
-        .argument::<String>("QUERY")
-        .help("Search query");
-
-    let index_name = long("index")
-        .argument::<String>("INDEX_NAME")
-        .help("Name of the index to query");
+pub fn search_command() -> OptionParser<BeetleCommand> {
+    let query = long("query")
+        .short('q')
+        .argument::<String>("QUERY_EXPRESSION")
+        .help("Search query expression");
 
     let formatter = long("format")
         .argument::<String>("FORMAT")
@@ -21,8 +18,8 @@ pub fn query_command() -> OptionParser<BeetleCommand> {
         .fallback(OutputFormat::Text);
 
     construct!(BeetleCommand::Query {
-        index_name,
-        search,
+        index_name(),
+        query,
         formatter
     })
     .to_options()

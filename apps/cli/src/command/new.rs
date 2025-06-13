@@ -2,7 +2,7 @@ use super::{index_name, BeetleCommand};
 use bpaf::*;
 use std::path::PathBuf;
 
-pub fn new() -> OptionParser<BeetleCommand> {
+pub fn new_command() -> OptionParser<BeetleCommand> {
     let path = long("path")
         .short('p')
         .argument::<PathBuf>("PATH")

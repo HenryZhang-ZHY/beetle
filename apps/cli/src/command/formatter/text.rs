@@ -1,12 +1,11 @@
-use super::{format_size, IndexInfo, IndexingStats, QueryResult, Result, ResultFormatter};
+use super::{format_size, IndexInfo, IndexingStats, ResultFormatter, SearchResult};
 
-/// Plain text formatter (human-readable)
 pub struct PlainTextFormatter;
 
 impl ResultFormatter for PlainTextFormatter {
-    fn format_search_results(&self, query: &str, results: &[QueryResult]) -> Result<String> {
+    fn format_search_results(&self, query: &str, results: &[SearchResult]) -> String {
         if results.is_empty() {
-            return Ok(format!("No results found for query: '{}'", query));
+            return format!("No results found for query: '{}'", query);
         }
 
         let mut output = format!("Found {} results for query '{}':\n\n", results.len(), query);
@@ -18,12 +17,12 @@ impl ResultFormatter for PlainTextFormatter {
             ));
         }
 
-        Ok(output)
+        output
     }
 
-    fn format_index_list(&self, indexes: &[IndexInfo]) -> Result<String> {
+    fn format_index_list(&self, indexes: &[IndexInfo]) -> String {
         if indexes.is_empty() {
-            return Ok("No indexes found. Create one with: beetle create <index_name> -p <repo_path> -o <output_path>".to_string());
+            return "No indexes found. Create one with: beetle create <index_name> -p <repo_path> -o <output_path>".to_string();
         }
 
         let mut result = format!("Found {} index(es):\n\n", indexes.len());
@@ -38,17 +37,17 @@ impl ResultFormatter for PlainTextFormatter {
             ));
         }
 
-        Ok(result)
+        result
     }
 
-    fn format_indexing_stats(&self, stats: &IndexingStats) -> Result<String> {
-        Ok(format!(
+    fn format_indexing_stats(&self, stats: &IndexingStats) -> String {
+        format!(
             "Successfully created index '{}':\n  Index path: {}\n  Files indexed: {}\n  Total content size: {}\n  Repository path: {}",
             stats.index_name,
             stats.index_path.display(),
             stats.file_count,
             format_size(stats.total_size),
             stats.repo_path.display()
-        ))
+        )
     }
 }
