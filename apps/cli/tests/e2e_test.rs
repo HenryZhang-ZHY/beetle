@@ -68,12 +68,11 @@ impl BeetleCommand {
         Self {
             cmd: Command::cargo_bin("beetle").unwrap(),
         }
-    }
-
-    fn create_index(mut self, name: &str, path: &Path, _output: &Path) -> Self {
+    }    fn new_index(mut self, name: &str, path: &Path, _output: &Path) -> Self {
         self.cmd
-            .arg("create")
+            .arg("new")
             .arg(format!("--path={}", path.display()))
+            .arg("-i")
             .arg(name);
         self
     }
@@ -169,7 +168,7 @@ fn cleanup_test_indexes() {
 /// Helper to create an index and return success status
 fn create_test_index(index_name: &str, source_path: &Path, _output_path: &Path) -> bool {
     let result = BeetleCommand::new()
-        .create_index(index_name, source_path, &PathBuf::new())
+        .new_index(index_name, source_path, &PathBuf::new())
         .output()
         .expect("Failed to execute command");
 
@@ -223,7 +222,7 @@ fn test_beetle_help() {
         .stdout(predicate::str::contains(
             "Beetle - Source Code Repository Indexing Tool",
         ))
-        .stdout(predicate::str::contains("create"))
+        .stdout(predicate::str::contains("new"))
         .stdout(predicate::str::contains("query"))
         .stdout(predicate::str::contains("list"));
 }
@@ -277,7 +276,7 @@ fn test_create_index_with_dotnet_fixtures() {
     );
 
     BeetleCommand::new()
-        .create_index(&ctx.index_name, &fixtures_path, ctx.temp_path())
+        .new_index(&ctx.index_name, &fixtures_path, ctx.temp_path())
         .assert()
         .success()
         .stdout(predicate::str::contains("indexed"))
@@ -293,7 +292,7 @@ fn test_create_index_with_invalid_path() {
     let invalid_path = PathBuf::from("non_existent_path_12345");
 
     BeetleCommand::new()
-        .create_index(&ctx.index_name, &invalid_path, ctx.temp_path())
+        .new_index(&ctx.index_name, &invalid_path, ctx.temp_path())
         .assert()
         .success()
         .stdout(predicate::str::contains("Files indexed: 0"));
@@ -313,7 +312,7 @@ fn test_create_index_with_special_characters() {
 
     for index_name in problematic_names {
         let result = BeetleCommand::new()
-            .create_index(index_name, &fixtures_path, ctx.temp_path())
+            .new_index(index_name, &fixtures_path, ctx.temp_path())
             .output()
             .unwrap();
 
@@ -337,7 +336,7 @@ fn test_create_index_with_absolute_paths() {
     let fixtures_path = ctx.fixtures_path();
 
     BeetleCommand::new()
-        .create_index(
+        .new_index(
             &ctx.index_name,
             &fixtures_path.canonicalize().unwrap(),
             &ctx.temp_path().canonicalize().unwrap(),
@@ -355,7 +354,7 @@ fn test_create_index_with_nested_directories() {
     let nested_output = ctx.temp_path().join("deeply").join("nested").join("path");
 
     BeetleCommand::new()
-        .create_index(&ctx.index_name, &fixtures_path, &nested_output)
+        .new_index(&ctx.index_name, &fixtures_path, &nested_output)
         .assert()
         .success()
         .stdout(predicate::str::contains("Files indexed: 2"));
@@ -553,7 +552,7 @@ fn test_full_workflow_create_and_search() {
 
     // Create index
     BeetleCommand::new()
-        .create_index(&ctx.index_name, &fixtures_path, ctx.temp_path())
+        .new_index(&ctx.index_name, &fixtures_path, ctx.temp_path())
         .assert()
         .success()
         .stdout(predicate::str::contains("indexed"));
@@ -687,7 +686,7 @@ fn test_index_different_file_types() {
     }
 
     let output = BeetleCommand::new()
-        .create_index(&ctx.index_name, ctx.temp_path(), ctx.temp_path())
+        .new_index(&ctx.index_name, ctx.temp_path(), ctx.temp_path())
         .output()
         .unwrap();
 
@@ -707,7 +706,7 @@ fn test_index_different_file_types() {
 #[serial]
 fn test_cli_argument_parsing_edge_cases() {
     // Missing required arguments
-    beetle_cmd().arg("create").assert().failure();
+    beetle_cmd().arg("new").assert().failure();
     beetle_cmd().arg("query").assert().failure();
 
     // Invalid commands
@@ -715,11 +714,11 @@ fn test_cli_argument_parsing_edge_cases() {
 
     // Help for specific commands
     beetle_cmd()
-        .arg("create")
+        .arg("new")
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicate::str::contains("Name of the index to create"));
+        .stdout(predicate::str::contains("Name of the index to operate on"));
 
     beetle_cmd()
         .arg("query")

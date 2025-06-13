@@ -24,7 +24,6 @@ impl Default for QueryOptions {
 
 /// Represents a search result
 pub struct QueryResult {
-    pub title: String,
     pub path: String,
     pub snippet: String,
     pub score: f32,
@@ -69,10 +68,9 @@ pub fn search(
             .with_context(|| "Failed to retrieve document")?;
 
         let document = Document::from_tantivy_doc(&retrieved_doc, &schema)?;
-        let snippet = extract_snippet(&document.body, query_str, options.snippet_length);
+        let snippet = extract_snippet(&document.content, query_str, options.snippet_length);
 
         results.push(QueryResult {
-            title: document.title,
             path: document.path,
             snippet,
             score,

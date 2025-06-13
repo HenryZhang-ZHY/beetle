@@ -1,18 +1,21 @@
-mod create;
+mod new;
 mod delete;
 mod list;
 mod query;
 mod runner;
 mod update;
+mod option;
 
 pub use runner::BeetleRunner;
+
+pub use option::index_name;
 
 use bpaf::*;
 use std::path::PathBuf;
 
 use crate::cli::{CliRunResult, Runner};
 
-use create::create_command;
+use new::new;
 use delete::delete_command;
 use list::list_command;
 use query::query_command;
@@ -30,11 +33,10 @@ pub enum OutputFormat {
 #[derive(Debug, Clone)]
 pub enum BeetleCommand {
     /// Create a new search index from a repository
-    Create {
-        /// Name of the index to create
+    New {
         index_name: String,
         /// Path to the repository folder to be indexed
-        repo_path: PathBuf,
+        path_to_be_indexed: PathBuf,
     },
     /// Query an existing index
     Query {
@@ -64,8 +66,8 @@ pub enum BeetleCommand {
 }
 
 pub fn beetle_command() -> OptionParser<BeetleCommand> {
-    let create = create_command()
-        .command("create")
+    let new = new()
+        .command("new")
         .help("Create a new index for a specified folder");
 
     let query = query_command()
@@ -84,11 +86,10 @@ pub fn beetle_command() -> OptionParser<BeetleCommand> {
         .command("update")
         .help("Update an existing index with new changes or reindex");
 
-    construct!([create, query, list, delete, update])
+    construct!([new, query, list, delete, update])
         .to_options()
         .descr("Beetle - Source Code Repository Indexing Tool")
         .header("Efficiently index and query source code repositories")
-        .footer("Examples:\n  beetle create my-index-01 --path /path/to/repository\n  beetle list\n  beetle query --index my-index-01 --search \"function_name\"\n  beetle update --index my-index-01 --incremental\n  beetle delete --index my-index-01")
 }
 
 #[cfg(test)]
@@ -96,18 +97,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_create_command_parsing() {
+    fn test_new_command_parsing() {
+        let args = Args::from(&["new", "-i", "my-index", "--path", "/path/to/repo"]);
         let parser = beetle_command();
 
-        // Test valid create command
-        let args = Args::from(&["create", "my-index", "--path", "/path/to/repo"]);
         let result = parser.run_inner(args);
+
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::Create {
+            BeetleCommand::New {
                 index_name,
-                repo_path,
+                path_to_be_indexed: repo_path,
             } => {
                 assert_eq!(index_name, "my-index");
                 assert_eq!(repo_path, PathBuf::from("/path/to/repo"));
@@ -116,7 +117,7 @@ mod tests {
         }
 
         // Test missing path argument
-        let args = Args::from(&["create", "my-index"]);
+        let args = Args::from(&["new", "my-index"]);
         let result = parser.run_inner(args);
         assert!(result.is_err());
     }
@@ -272,7 +273,7 @@ mod tests {
         assert!(result.is_err());
 
         // Test invalid arguments
-        let args = Args::from(&["create", "--invalid-flag"]);
+        let args = Args::from(&["new", "--invalid-flag"]);
         let result = parser.run_inner(args);
         assert!(result.is_err());
     }
@@ -287,7 +288,7 @@ mod tests {
         assert!(result.is_err()); // Help returns an error with help message
 
         // Test help for subcommands
-        let args = Args::from(&["create", "--help"]);
+        let args = Args::from(&["new", "--help"]);
         let result = parser.run_inner(args);
         assert!(result.is_err());
     }
@@ -313,7 +314,8 @@ mod tests {
 
         // Test special characters in arguments
         let args = Args::from(&[
-            "create",
+            "new",
+            "--index",
             "index-with-dashes",
             "--path",
             "/path/with spaces/and-dashes",

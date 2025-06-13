@@ -11,7 +11,6 @@ struct SearchOutput {
 
 #[derive(Serialize, Deserialize)]
 struct SearchResultJson {
-    title: String,
     path: String,
     score: f32,
     snippet: String,
@@ -36,7 +35,6 @@ impl ResultFormatter for JsonFormatter {
             results: results
                 .iter()
                 .map(|r| SearchResultJson {
-                    title: r.title.clone(),
                     path: r.path.clone(),
                     score: r.score,
                     snippet: r.snippet.clone(),

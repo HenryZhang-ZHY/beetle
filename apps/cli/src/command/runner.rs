@@ -1,7 +1,7 @@
 use std::env;
 
 use beetle_engine::{
-    create_index, list_indexes, search_index, IndexingOptions, JsonFormatter, PlainTextFormatter,
+    new_index, list_indexes, search_index, IndexingOptions, JsonFormatter, PlainTextFormatter,
     QueryOptions,
 };
 
@@ -11,38 +11,41 @@ use super::{BeetleCommand, CliRunResult, OutputFormat, Runner};
 
 pub struct BeetleRunner {
     options: BeetleCommand,
-    cwd: PathBuf,
+}
+
+impl BeetleRunner {
+    fn get_beetle_home() -> String {
+        let beetle_home = std::env::var("BEETLE_HOME").unwrap_or_else(|_| {
+            let home_dir = std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .unwrap_or_else(|_| ".".to_string());
+            format!("{}/.beetle", home_dir)
+        });
+
+        return beetle_home;
+    }
 }
 
 impl Runner for BeetleRunner {
     type Options = BeetleCommand;
 
     fn new(options: Self::Options) -> Self {
-        Self {
-            options,
-            cwd: env::current_dir().expect("Failed to get current working directory"),
-        }
+        Self { options }
     }
 
     fn run(self) -> CliRunResult {
         match self.options {
-            BeetleCommand::Create {
+            BeetleCommand::New {
                 index_name,
-                repo_path,
+                path_to_be_indexed,
             } => {
-                // Use ~/.beetle/indexes/<index_name> as the output path by default
-                let beetle_home = std::env::var("BEETLE_HOME").unwrap_or_else(|_| {
-                    let home_dir = std::env::var("HOME")
-                        .or_else(|_| std::env::var("USERPROFILE"))
-                        .unwrap_or_else(|_| ".".to_string());
-                    format!("{}/.beetle", home_dir)
-                });
-                let output_path = PathBuf::from(beetle_home).join("indexes").join(&index_name);
+                let beetle_home = BeetleRunner::get_beetle_home();
+                let index_path = PathBuf::from(beetle_home).join("indexes").join(&index_name);
 
-                match create_index(
+                match new_index(
                     &index_name,
-                    &repo_path,
-                    &output_path,
+                    &path_to_be_indexed,
+                    &index_path,
                     IndexingOptions::new(),
                     &PlainTextFormatter,
                 ) {

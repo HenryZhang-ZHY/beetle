@@ -96,44 +96,43 @@ impl IndexingOptions {
 
 /// Manages search indexes
 pub struct IndexManager {
-    base_path: PathBuf,
+    index_path: PathBuf,
 }
 
 impl Default for IndexManager {
     fn default() -> Self {
         Self {
-            base_path: PathBuf::from("."),
+            index_path: PathBuf::from("."),
         }
     }
 }
 
 impl IndexManager {
-    pub fn new(base_path: PathBuf) -> Self {
-        Self { base_path }
+    pub fn new(index_path: PathBuf) -> Self {
+        Self { index_path }
     }
 
-    pub fn create_index(
+    pub fn new_index(
         &self,
         index_name: &str,
-        repo_path: &PathBuf,
+        path_to_be_indexed: &PathBuf,
         options: Option<IndexingOptions>,
     ) -> Result<IndexingStats> {
         let options = options.unwrap_or_else(IndexingOptions::new);
 
-        let index_path = self.base_path.join(index_name);
-        fs::create_dir_all(&index_path).with_context(|| {
-            format!("Failed to create index directory: {}", index_path.display())
+        fs::create_dir_all(&self.index_path).with_context(|| {
+            format!("Failed to create index directory: {}", &self.index_path.display())
         })?;
 
         let schema = IndexSchema::create();
-        let index = Index::create_in_dir(&index_path, schema.clone())
+        let index = Index::create_in_dir(&self.index_path, schema.clone())
             .with_context(|| "Failed to create tantivy index")?;
 
         let mut writer = index
-            .writer(50_000_000)
+            .writer(1024 * 1024 * 1024 * 2)
             .with_context(|| "Failed to create index writer")?;
 
-        let stats = self.index_repository(&mut writer, &schema, repo_path, &options)?;
+        let stats = self.index_repository(&mut writer, &schema, path_to_be_indexed, &options)?;
 
         writer.commit().with_context(|| "Failed to commit index")?;
 
@@ -160,17 +159,16 @@ impl IndexManager {
         &self,
         writer: &mut IndexWriter,
         schema: &tantivy::schema::Schema,
-        repo_path: &PathBuf,
+        path_to_be_indexed: &PathBuf,
         options: &IndexingOptions,
     ) -> Result<IndexingStats> {
-        let title_field = schema.get_field(IndexSchema::TITLE_FIELD)?;
-        let body_field = schema.get_field(IndexSchema::BODY_FIELD)?;
+        let content_field = schema.get_field(IndexSchema::CONTENT_FIELD)?;
         let path_field = schema.get_field(IndexSchema::PATH_FIELD)?;
 
         let mut stats = IndexingStats::default();
 
         // Use ignore crate to respect .gitignore files
-        let walker = WalkBuilder::new(repo_path)
+        let walker = WalkBuilder::new(path_to_be_indexed)
             .hidden(!options.include_hidden) // Include hidden files based on options
             .git_ignore(options.respect_gitignore) // Respect .gitignore files
             .git_global(options.respect_git_global) // Respect global git ignore
@@ -195,20 +193,12 @@ impl IndexManager {
             }
 
             if let Ok(content) = fs::read_to_string(file_path) {
-                let relative_path = file_path
-                    .strip_prefix(repo_path)
-                    .unwrap_or(file_path)
+                let absolute_path = file_path
                     .to_string_lossy()
                     .to_string();
 
-                let file_name = file_path
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string();
-
-                let doc = Document::new(file_name, content.clone(), relative_path);
-                writer.add_document(doc.to_tantivy_doc(title_field, body_field, path_field))?;
+                let doc = Document::new(content.clone(), absolute_path);
+                writer.add_document(doc.to_tantivy_doc(content_field, path_field))?;
 
                 stats.file_count += 1;
                 stats.total_size += content.len() as u64;
@@ -242,9 +232,9 @@ impl IndexManager {
     /// List all available indexes
     pub fn list_indexes(&self) -> Result<Vec<IndexInfo>> {
         let search_paths = vec![
-            self.base_path.join("indexes"),
-            self.base_path.join("indices"),
-            self.base_path.clone(),
+            self.index_path.join("indexes"),
+            self.index_path.join("indices"),
+            self.index_path.clone(),
         ];
 
         let mut found_indexes = Vec::new();
@@ -262,9 +252,9 @@ impl IndexManager {
     fn find_index(&self, index_name: &str) -> Result<PathBuf> {
         let possible_paths = vec![
             PathBuf::from(index_name),
-            self.base_path.join("indexes").join(index_name),
-            self.base_path.join("indices").join(index_name),
-            self.base_path.join(index_name),
+            self.index_path.join("indexes").join(index_name),
+            self.index_path.join("indices").join(index_name),
+            self.index_path.join(index_name),
         ];
 
         possible_paths

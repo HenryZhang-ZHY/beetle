@@ -12,14 +12,11 @@ impl IndexSchema {
     /// - `path`: The relative file path (stored only, not searchable)
     pub fn create() -> Schema {
         let mut schema_builder = Schema::builder();
-        schema_builder.add_text_field("title", TEXT | STORED);
-        schema_builder.add_text_field("body", TEXT | STORED);
+        schema_builder.add_text_field("content", TEXT | STORED);
         schema_builder.add_text_field("path", STORED);
         schema_builder.build()
     }
 
-    /// Get field names as constants for consistency
-    pub const TITLE_FIELD: &'static str = "title";
-    pub const BODY_FIELD: &'static str = "body";
+    pub const CONTENT_FIELD: &'static str = "content";
     pub const PATH_FIELD: &'static str = "path";
 }

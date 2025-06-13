@@ -14,20 +14,20 @@ use anyhow::Result;
 use std::path::PathBuf;
 
 /// Create a new search index from a repository
-pub fn create_index<F: ResultFormatter>(
+pub fn new_index<F: ResultFormatter>(
     index_name: &str,
-    repo_path: &PathBuf,
-    output_path: &PathBuf,
+    path_to_be_indexed: &PathBuf,
+    index_path: &PathBuf,
     options: IndexingOptions,
     formatter: &F,
 ) -> Result<String> {
-    let manager = IndexManager::new(output_path.clone());
-    let mut stats = manager.create_index(index_name, repo_path, Some(options))?;
+    let manager = IndexManager::new(index_path.clone());
+    let mut stats = manager.new_index(index_name, path_to_be_indexed, Some(options))?;
 
     // Update stats with the actual paths used
     stats.index_name = index_name.to_string();
-    stats.index_path = output_path.join(index_name);
-    stats.repo_path = repo_path.clone();
+    stats.index_path = index_path.join(index_name);
+    stats.repo_path = path_to_be_indexed.clone();
 
     formatter.format_indexing_stats(&stats)
 }
