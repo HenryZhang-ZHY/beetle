@@ -1,4 +1,4 @@
-use super::{format_size, IndexInfo, IndexingStats, ResultFormatter, SearchResult};
+use super::{format_size, IndexingStats, ResultFormatter, SearchResult};
 
 pub struct PlainTextFormatter;
 
@@ -18,26 +18,6 @@ impl ResultFormatter for PlainTextFormatter {
         }
 
         output
-    }
-
-    fn format_index_list(&self, indexes: &[IndexInfo]) -> String {
-        if indexes.is_empty() {
-            return "No indexes found. Create one with: beetle create <index_name> -p <repo_path> -o <output_path>".to_string();
-        }
-
-        let mut result = format!("Found {} index(es):\n\n", indexes.len());
-
-        for index in indexes {
-            result.push_str(&format!(
-                "📂 {}\n   Path: {}\n   Documents: {}\n   Size: {}\n\n",
-                index.name,
-                index.path.display(),
-                index.metadata.doc_count,
-                format_size(index.metadata.size_bytes)
-            ));
-        }
-
-        result
     }
 
     fn format_indexing_stats(&self, stats: &IndexingStats) -> String {

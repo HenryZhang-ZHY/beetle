@@ -1,4 +1,4 @@
-use super::{IndexInfo, IndexingStats, ResultFormatter, SearchResult};
+use super::{IndexingStats, ResultFormatter, SearchResult};
 
 use serde::{Deserialize, Serialize};
 
@@ -41,26 +41,6 @@ impl ResultFormatter for JsonFormatter {
                 })
                 .collect(),
         };
-
-        if self.pretty {
-            serde_json::to_string_pretty(&output).unwrap_or("".to_string())
-        } else {
-            serde_json::to_string(&output).unwrap_or("".to_string())
-        }
-    }
-
-    fn format_index_list(&self, indexes: &[IndexInfo]) -> String {
-        let output = serde_json::json!({
-            "count": indexes.len(),
-            "indexes": indexes.iter().map(|index| {
-                serde_json::json!({
-                    "name": index.name,
-                    "path": index.path.display().to_string(),
-                    "doc_count": index.metadata.doc_count,
-                    "size_bytes": index.metadata.size_bytes,
-                })
-            }).collect::<Vec<_>>()
-        });
 
         if self.pretty {
             serde_json::to_string_pretty(&output).unwrap_or("".to_string())

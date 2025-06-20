@@ -16,8 +16,6 @@ pub use option::index_name;
 use bpaf::*;
 use std::path::PathBuf;
 
-use crate::cli::{CliRunResult, Runner};
-
 use delete::delete_command;
 use list::list_command;
 use new::new_command;

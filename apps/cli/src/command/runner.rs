@@ -2,10 +2,8 @@ use beetle_engine::{new_index, IndexManager, IndexingOptions};
 
 use std::path::PathBuf;
 
-use super::{
-    BeetleCommand, CliRunResult, JsonFormatter, OutputFormat, PlainTextFormatter, ResultFormatter,
-    Runner,
-};
+use super::{BeetleCommand, JsonFormatter, OutputFormat, PlainTextFormatter, ResultFormatter};
+use crate::cli::{CliRunResult, Runner};
 
 pub struct BeetleRunner {
     options: BeetleCommand,

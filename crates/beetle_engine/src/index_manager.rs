@@ -7,7 +7,6 @@ use tantivy::{Index, IndexWriter, ReloadPolicy};
 
 use crate::document::Document;
 use crate::schema::IndexSchema;
-use crate::search::SearchResult;
 
 /// Options for controlling indexing behavior, particularly around git ignore rules
 ///
@@ -212,7 +211,6 @@ impl IndexManager {
 
         Ok(stats)
     }
-
     /// List all available indexes
     pub fn list_indexes(&self) -> Result<Vec<IndexInfo>> {
         let search_paths = vec![
@@ -230,26 +228,6 @@ impl IndexManager {
         }
 
         Ok(found_indexes)
-    }
-
-    /// Find an index by name
-    fn find_index(&self, index_name: &str) -> Result<PathBuf> {
-        let possible_paths = vec![
-            PathBuf::from(index_name),
-            self.index_path.join("indexes").join(index_name),
-            self.index_path.join("indices").join(index_name),
-            self.index_path.join(index_name),
-        ];
-
-        possible_paths
-            .into_iter()
-            .find(|p| p.exists() && p.is_dir() && p.join("meta.json").exists())
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Index '{}' not found. Tried looking in current directory and common index locations.",
-                    index_name
-                )
-            })
     }
 
     /// Scan a directory for indexes
