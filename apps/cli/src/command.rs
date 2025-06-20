@@ -126,7 +126,7 @@ mod tests {
         let parser = beetle_command();
 
         // Test query with default text format
-        let args = Args::from(&["query", "--index", "my-index", "--search", "main function"]);
+        let args = Args::from(&["search", "--index", "my-index", "--query", "main function"]);
         let result = parser.run_inner(args);
         assert!(result.is_ok());
 
@@ -145,7 +145,7 @@ mod tests {
 
         // Test query with JSON format
         let args = Args::from(&[
-            "query", "--index", "test-idx", "--search", "TODO", "--format", "json",
+            "search", "--index", "test-idx", "--query", "TODO", "--format", "json",
         ]);
         let result = parser.run_inner(args);
         assert!(result.is_ok());
@@ -294,10 +294,8 @@ mod tests {
 
     #[test]
     fn test_edge_cases() {
-        let parser = beetle_command();
-
-        // Test empty strings
-        let args = Args::from(&["query", "--index", "", "--search", ""]);
+        let parser = beetle_command(); // Test empty strings
+        let args = Args::from(&["search", "--index", "", "--query", ""]);
         let result = parser.run_inner(args);
         assert!(result.is_ok());
 
@@ -323,7 +321,7 @@ mod tests {
         assert!(result.is_ok());
 
         // Test Unicode in search query
-        let args = Args::from(&["query", "--index", "test", "--search", "你好 world 🦀"]);
+        let args = Args::from(&["search", "--index", "test", "--query", "你好 world 🦀"]);
         let result = parser.run_inner(args);
         assert!(result.is_ok());
 
