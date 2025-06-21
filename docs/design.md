@@ -218,6 +218,7 @@ This design document serves as both a technical specification and a development 
 
 ## VSCode Extension
 
+- [ ] use vue for the UI
 - [ ] columns are resizable
 - [ ] can run query from multiple indexes
 - [ ] search results and the corresponding query are saved in the history and can be reused
