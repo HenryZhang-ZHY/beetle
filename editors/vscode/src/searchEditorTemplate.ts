@@ -1,10 +1,14 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import { BeetleService } from './beetleService';
 import { SearchResult } from './types';
+import { WebviewTemplates } from './webviewTemplates';
 
-export class SearchEditorProvider {
-    private static readonly viewType = 'beetle.searchEditor';
+/**
+ * Alternative SearchEditorProvider using template-based approach
+ * This version demonstrates better organization without separate files
+ */
+export class SearchEditorProviderTemplate {
+    private static readonly viewType = 'beetle.searchEditorTemplate';
     private readonly beetleService: BeetleService;
 
     constructor(beetleService: BeetleService) {
@@ -13,8 +17,8 @@ export class SearchEditorProvider {
 
     public async openSearchEditor(context: vscode.ExtensionContext) {
         const panel = vscode.window.createWebviewPanel(
-            SearchEditorProvider.viewType,
-            'Beetle Search Editor',
+            SearchEditorProviderTemplate.viewType,
+            'Beetle Search Editor (Template)',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -23,7 +27,7 @@ export class SearchEditorProvider {
             }
         );
 
-        panel.webview.html = this.getWebviewContent(panel.webview, context.extensionUri);
+        panel.webview.html = WebviewTemplates.createSearchEditor(panel.webview, context.extensionUri);
         
         // Handle messages from the webview
         panel.webview.onDidReceiveMessage(
@@ -73,21 +77,5 @@ export class SearchEditorProvider {
             undefined,
             context.subscriptions
         );
-    }    private getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-        // Get the URIs for the HTML, CSS, and JavaScript files
-        const htmlUri = vscode.Uri.joinPath(extensionUri, 'media', 'searchEditor.html');
-        const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'searchEditor.css'));
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'searchEditor.js'));
-        
-        // Read the HTML template and replace placeholders
-        let htmlContent = fs.readFileSync(htmlUri.fsPath, 'utf8');
-        
-        // Replace placeholders with actual URIs
-        htmlContent = htmlContent
-            .replace(/#{cspSource}/g, webview.cspSource)
-            .replace(/#{cssUri}/g, cssUri.toString())
-            .replace(/#{scriptUri}/g, scriptUri.toString());
-            
-        return htmlContent;
     }
 }

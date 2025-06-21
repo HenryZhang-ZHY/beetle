@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src #{cspSource}; script-src #{cspSource};">
+    <title>Beetle Search Editor</title>
+    <link rel="stylesheet" href="#{cssUri}">
+</head>
+<body>
+    <div class="search-container">
+        <select id="indexSelect" class="index-select">
+            <option value="">Select an index...</option>
+        </select>
+        <input type="text" id="searchInput" class="search-input" placeholder="Enter search query...">
+        <button id="searchButton" class="search-button" disabled>Search</button>
+    </div>
+    
+    <div id="errorContainer"></div>
+    
+    <div class="results-container">
+        <div class="results-header">
+            <span id="resultsCount">Search Results</span>
+            <span id="resizeStatus" style="float: right; font-size: 0.8em; color: var(--vscode-descriptionForeground);"></span>
+        </div>
+        <div id="resultsContent">
+            <div class="empty-state">
+                Select an index and enter a search query to begin
+            </div>
+        </div>
+    </div>
+
+    <script src="#{scriptUri}"></script>
+</body>
+</html>

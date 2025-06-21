@@ -1,0 +1,249 @@
+// Acquire VS Code API
+const vscode = acquireVsCodeApi();
+
+// DOM Elements
+const indexSelect = document.getElementById('indexSelect');
+const searchInput = document.getElementById('searchInput');
+const searchButton = document.getElementById('searchButton');
+const resultsCount = document.getElementById('resultsCount');
+const resultsContent = document.getElementById('resultsContent');
+const errorContainer = document.getElementById('errorContainer');
+const resizeStatus = document.getElementById('resizeStatus');
+
+// State
+let currentResults = [];
+
+// Initialize
+init();
+
+function init() {
+    // Request indexes on load
+    vscode.postMessage({ type: 'getIndexes' });
+    
+    // Event listeners
+    indexSelect.addEventListener('change', updateSearchButtonState);
+    searchInput.addEventListener('input', updateSearchButtonState);
+    searchInput.addEventListener('keydown', handleKeyDown);
+    searchButton.addEventListener('click', performSearch);
+    
+    // Listen for messages from the extension
+    window.addEventListener('message', handleMessage);
+}
+
+function handleKeyDown(e) {
+    if (e.key === 'Enter' && !searchButton.disabled) {
+        performSearch();
+    }
+}
+
+function handleMessage(event) {
+    const message = event.data;
+    
+    switch (message.type) {
+        case 'indexesLoaded':
+            populateIndexes(message.indexes);
+            break;
+        case 'searchResults':
+            displayResults(message.results, message.query);
+            break;
+        case 'searchError':
+            showError(message.error);
+            break;
+    }
+}
+
+function updateSearchButtonState() {
+    const hasIndex = indexSelect.value !== '';
+    const hasQuery = searchInput.value.trim() !== '';
+    searchButton.disabled = !hasIndex || !hasQuery;
+}
+
+function populateIndexes(indexes) {
+    indexSelect.innerHTML = '<option value="">Select an index...</option>';
+    indexes.forEach(index => {
+        const option = document.createElement('option');
+        option.value = index.name;
+        option.textContent = index.name + (index.file_count ? ` (${index.file_count} files)` : '');
+        indexSelect.appendChild(option);
+    });
+    updateSearchButtonState();
+}
+
+function performSearch() {
+    if (searchButton.disabled) return;
+    
+    const indexName = indexSelect.value;
+    const query = searchInput.value.trim();
+    
+    showLoading();
+    clearError();
+    
+    vscode.postMessage({
+        type: 'search',
+        indexName: indexName,
+        query: query
+    });
+}
+
+function showLoading() {
+    resultsContent.innerHTML = '<div class="loading">Searching...</div>';
+    resultsCount.textContent = 'Searching...';
+}
+
+function displayResults(results, query) {
+    currentResults = results;
+    
+    if (results.length === 0) {
+        resultsContent.innerHTML = `<div class="empty-state">No results found for "${query}"</div>`;
+        resultsCount.textContent = 'No Results';
+        return;
+    }
+    
+    resultsCount.textContent = `${results.length} result${results.length === 1 ? '' : 's'} for "${query}"`;
+    
+    let html = '<table class="results-grid">';
+    
+    // Header row with resizable columns
+    html += `
+        <thead>
+            <tr class="results-header-row">
+                <th class="results-cell column-header column-file-path">
+                    File Path
+                    <div class="column-resizer" data-column="0"></div>
+                </th>
+                <th class="results-cell column-header column-file-name">
+                    File Name
+                    <div class="column-resizer" data-column="1"></div>
+                </th>
+                <th class="results-cell column-header column-code-line">
+                    Code Line
+                    <div class="column-resizer" data-column="2"></div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    // Data rows
+    results.forEach((result, index) => {
+        const fileName = result.path.split(/[\\\/]/).pop() || '';
+        const lineNumber = result.line_number || 1;
+        const snippet = result.snippet || result.content || '';
+        
+        html += `
+            <tr class="results-row" onclick="openFile('${result.path}', ${lineNumber})">
+                <td class="results-cell column-file-path">
+                    <div class="file-path">${result.path}</div>
+                </td>
+                <td class="results-cell column-file-name">
+                    <div class="file-name">${fileName}</div>
+                    <div class="line-number">Line ${lineNumber}</div>
+                </td>
+                <td class="results-cell column-code-line">
+                    <div class="code-line">${snippet}</div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table>';
+    resultsContent.innerHTML = html;
+    
+    // Initialize column resizing
+    initializeColumnResizing();
+}
+
+function openFile(filePath, lineNumber) {
+    vscode.postMessage({
+        type: 'openFile',
+        filePath: filePath,
+        lineNumber: lineNumber
+    });
+}
+
+function showError(errorMessage) {
+    errorContainer.innerHTML = `<div class="error">Error: ${errorMessage}</div>`;
+}
+
+function clearError() {
+    errorContainer.innerHTML = '';
+}
+
+function initializeColumnResizing() {
+    const resizers = document.querySelectorAll('.column-resizer');
+    let isResizing = false;
+    let currentResizer = null;
+    let startX = 0;
+    let startWidth = 0;
+    
+    resizers.forEach(resizer => {
+        resizer.addEventListener('mousedown', initResize);
+    });
+    
+    function initResize(e) {
+        currentResizer = e.target;
+        isResizing = true;
+        startX = e.clientX;
+        
+        const columnIndex = parseInt(currentResizer.dataset.column);
+        const table = document.querySelector('.results-grid');
+        const headerCells = table.querySelectorAll('thead th');
+        startWidth = headerCells[columnIndex].offsetWidth;
+        
+        currentResizer.classList.add('resizing');
+        document.body.classList.add('resizing-active');
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+        
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    function doResize(e) {
+        if (!isResizing || !currentResizer) return;
+        
+        const columnIndex = parseInt(currentResizer.dataset.column);
+        const table = document.querySelector('.results-grid');
+        const headerCells = table.querySelectorAll('thead th');
+        const targetCell = headerCells[columnIndex];
+        
+        const diff = e.clientX - startX;
+        const newWidth = Math.max(50, startWidth + diff); // Minimum width of 50px
+        const percentage = (newWidth / table.offsetWidth) * 100;
+        
+        // Show resize status
+        const columnNames = ['File Path', 'File Name', 'Code Line'];
+        resizeStatus.textContent = `Resizing ${columnNames[columnIndex]}: ${Math.round(percentage)}%`;
+        
+        // Update the specific column class width
+        const className = targetCell.className.split(' ').find(c => c.startsWith('column-'));
+        if (className) {
+            const style = document.createElement('style');
+            style.textContent = `.${className} { width: ${percentage}% !important; }`;
+            
+            // Remove any existing style for this column
+            const existingStyle = document.querySelector(`style[data-column="${className}"]`);
+            if (existingStyle) {
+                existingStyle.remove();
+            }
+            
+            style.setAttribute('data-column', className);
+            document.head.appendChild(style);
+        }
+    }
+    
+    function stopResize(e) {
+        if (!isResizing) return;
+        
+        isResizing = false;
+        document.body.classList.remove('resizing-active');
+        resizeStatus.textContent = ''; // Clear resize status
+        if (currentResizer) {
+            currentResizer.classList.remove('resizing');
+            currentResizer = null;
+        }
+        
+        document.removeEventListener('mousemove', doResize);
+        document.removeEventListener('mouseup', stopResize);
+    }
+}
