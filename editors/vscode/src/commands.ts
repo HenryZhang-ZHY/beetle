@@ -120,7 +120,6 @@ export function registerCommands(
 				placeHolder: 'Available indexes'
 			});
 		}),
-
 		vscode.commands.registerCommand('beetle.deleteIndex', async (item?: IndexItem) => {
 			let indexName: string;
 
@@ -149,8 +148,16 @@ export function registerCommands(
 			);
 
 			if (confirm === 'Delete') {
-				// Note: The beetle CLI might not have a delete command yet
-				vscode.window.showInformationMessage(`Index deletion not yet implemented in beetle CLI`);
+				vscode.window.withProgress({
+					location: vscode.ProgressLocation.Notification,
+					title: `Deleting index "${indexName}"...`,
+					cancellable: false
+				}, async () => {
+					const success = await beetleService.deleteIndex(indexName);
+					if (success) {
+						indexProvider.refresh();
+					}
+				});
 			}
 		}),
 
