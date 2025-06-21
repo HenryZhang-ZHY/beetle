@@ -1,6 +1,6 @@
 {
   "name": "beetle",
-  "displayName": "beetle Code Search",
+  "displayName": "beetle code search",
   "description": "Lightning-fast source code search and indexing tool for VS Code",
   "version": "0.0.1",
   "engines": {
@@ -120,7 +120,7 @@
         },
         {
           "command": "beetle.openSearchEditor",
-          "when": "view == beetleSearch",
+          "when": "view == beetleSearchEditor",
           "group": "navigation"
         }
       ],

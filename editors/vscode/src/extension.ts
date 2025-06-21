@@ -31,12 +31,6 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerWebviewViewProvider(SearchEditorProvider.viewType, searchEditorProvider)
 	);
 
-	// Register tree data providers
-	vscode.window.createTreeView('beetleSearch', {
-		treeDataProvider: searchResultProvider,
-		showCollapseAll: true
-	});
-
 	vscode.window.createTreeView('beetleIndexes', {
 		treeDataProvider: indexProvider,
 		showCollapseAll: true
