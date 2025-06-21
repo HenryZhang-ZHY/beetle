@@ -70,7 +70,9 @@ function populateIndexes(indexes) {
 }
 
 function performSearch() {
-    if (searchButton.disabled) return;
+    if (searchButton.disabled) {
+        return;
+    }
     
     const indexName = indexSelect.value;
     const query = searchInput.value.trim();
@@ -92,11 +94,20 @@ function showLoading() {
 
 function displayResults(results, query) {
     currentResults = results;
+    const helpText = document.querySelector('.help-text');
     
     if (results.length === 0) {
         resultsContent.innerHTML = `<div class="empty-state">No results found for "${query}"</div>`;
         resultsCount.textContent = 'No Results';
+        if (helpText) {
+            helpText.style.display = 'none';
+        }
         return;
+    }
+    
+    // Show help text when there are results
+    if (helpText) {
+        helpText.style.display = 'inline';
     }
     
     resultsCount.textContent = `${results.length} result${results.length === 1 ? '' : 's'} for "${query}"`;
@@ -123,15 +134,14 @@ function displayResults(results, query) {
         </thead>
         <tbody>
     `;
-    
-    // Data rows
+      // Data rows
     results.forEach((result, index) => {
         const fileName = result.path.split(/[\\\/]/).pop() || '';
         const lineNumber = result.line_number || 1;
         const snippet = result.snippet || result.content || '';
         
         html += `
-            <tr class="results-row" onclick="openFile('${result.path}', ${lineNumber})">
+            <tr class="results-row" data-file-path="${result.path}" data-line-number="${lineNumber}">
                 <td class="results-cell column-file-path">
                     <div class="file-path">${result.path}</div>
                 </td>
@@ -145,9 +155,21 @@ function displayResults(results, query) {
             </tr>
         `;
     });
-    
-    html += '</tbody></table>';
+      html += '</tbody></table>';
     resultsContent.innerHTML = html;
+    
+    // Add double-click event listeners to result rows
+    const resultRows = document.querySelectorAll('.results-row');
+    resultRows.forEach(row => {
+        row.addEventListener('dblclick', function() {
+            const filePath = this.dataset.filePath;
+            const lineNumber = parseInt(this.dataset.lineNumber) || 1;
+            openFile(filePath, lineNumber);
+        });
+        
+        // Optional: Add visual feedback for clickable rows
+        row.style.cursor = 'pointer';
+    });
     
     // Initialize column resizing
     initializeColumnResizing();
@@ -198,9 +220,10 @@ function initializeColumnResizing() {
         e.preventDefault();
         e.stopPropagation();
     }
-    
-    function doResize(e) {
-        if (!isResizing || !currentResizer) return;
+      function doResize(e) {
+        if (!isResizing || !currentResizer) {
+            return;
+        }
         
         const columnIndex = parseInt(currentResizer.dataset.column);
         const table = document.querySelector('.results-grid');
@@ -231,9 +254,10 @@ function initializeColumnResizing() {
             document.head.appendChild(style);
         }
     }
-    
-    function stopResize(e) {
-        if (!isResizing) return;
+      function stopResize(e) {
+        if (!isResizing) {
+            return;
+        }
         
         isResizing = false;
         document.body.classList.remove('resizing-active');

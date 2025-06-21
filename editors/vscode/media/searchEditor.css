@@ -61,6 +61,16 @@ body {
     padding: 10px;
     border-bottom: 1px solid var(--vscode-panel-border);
     font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.help-text {
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+    font-weight: normal;
+    font-style: italic;
 }
 
 .results-grid {
@@ -77,10 +87,15 @@ body {
 .results-row {
     cursor: pointer;
     transition: background-color 0.1s ease;
+    user-select: none; /* Prevent text selection on double-click */
 }
 
 .results-row:hover {
     background-color: var(--vscode-list-hoverBackground);
+}
+
+.results-row:active {
+    background-color: var(--vscode-list-activeSelectionBackground);
 }
 
 .results-row:nth-child(even) {
