@@ -10,6 +10,8 @@ export function registerCommands(
 	searchResultProvider: SearchResultProvider,
 	indexProvider: IndexProvider
 ): void {
+	const searchEditorProvider = new SearchEditorProvider(beetleService);
+	
 	const commands = [
 		vscode.commands.registerCommand('beetle.search', async () => {
 			const indexes = await beetleService.listIndexes();
@@ -155,15 +157,14 @@ export function registerCommands(
 		vscode.commands.registerCommand('beetle.openSearchPanel', () => {
 			vscode.commands.executeCommand('workbench.view.extension.beetle');
 		}),
-
+		
 		vscode.commands.registerCommand('beetle.refreshIndexes', () => {
 			indexProvider.refresh();
 		}),
 
-		vscode.commands.registerCommand('beetle.openSearchEditor', () => {
-			const searchEditorProvider = new SearchEditorProvider(beetleService);
-			searchEditorProvider.openSearchEditor(context);
-		})
+		vscode.commands.registerCommand('beetle.openSearchEditor', async () => {
+			await searchEditorProvider.openSearchEditor(context);
+		}),
 	];
 
 	// Add all commands to subscriptions

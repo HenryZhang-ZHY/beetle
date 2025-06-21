@@ -146,21 +146,18 @@ export class SearchEditorProvider {
             border-bottom: 1px solid var(--vscode-panel-border);
             font-weight: bold;
         }
-        
-        .results-grid {
-            display: table;
+          .results-grid {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
         
         .results-header-row {
-            display: table-row;
             background-color: var(--vscode-list-activeSelectionBackground);
             font-weight: bold;
         }
         
         .results-row {
-            display: table-row;
             cursor: pointer;
             transition: background-color 0.1s ease;
         }
@@ -174,10 +171,53 @@ export class SearchEditorProvider {
         }
         
         .results-cell {
-            display: table-cell;
             padding: 8px 12px;
             border-bottom: 1px solid var(--vscode-panel-border);
             vertical-align: top;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .column-header {
+            position: relative;
+            user-select: none;
+            cursor: default;
+        }
+          .column-resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background-color: transparent;
+            border-right: 1px solid var(--vscode-panel-border);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 10;
+        }
+        
+        .column-header:hover .column-resizer,
+        .column-resizer.resizing {
+            opacity: 1;
+            background-color: var(--vscode-focusBorder);
+            width: 2px;
+            box-shadow: 0 0 2px var(--vscode-focusBorder);
+        }
+        
+        .column-file-path {
+            width: 40%;
+            min-width: 200px;
+        }
+        
+        .column-file-name {
+            width: 25%;
+            min-width: 150px;
+        }
+        
+        .column-code-line {
+            width: 35%;
+            min-width: 200px;
         }
         
         .file-path {
@@ -190,14 +230,12 @@ export class SearchEditorProvider {
             font-weight: bold;
             color: var(--vscode-foreground);
         }
-        
-        .code-line {
+          .code-line {
             font-family: var(--vscode-editor-font-family);
             font-size: 0.9em;
             background-color: var(--vscode-textCodeBlock-background);
             padding: 4px 8px;
             border-radius: 3px;
-            max-width: 400px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -228,6 +266,12 @@ export class SearchEditorProvider {
             border-radius: 4px;
             margin-bottom: 10px;
         }
+        
+        /* Prevent text selection while resizing */
+        .resizing-active * {
+            user-select: none !important;
+            cursor: col-resize !important;
+        }
     </style>
 </head>
 <body>
@@ -240,10 +284,10 @@ export class SearchEditorProvider {
     </div>
     
     <div id="errorContainer"></div>
-    
-    <div class="results-container">
+      <div class="results-container">
         <div class="results-header">
             <span id="resultsCount">Search Results</span>
+            <span id="resizeStatus" style="float: right; font-size: 0.8em; color: var(--vscode-descriptionForeground);"></span>
         </div>
         <div id="resultsContent">
             <div class="empty-state">
@@ -257,10 +301,10 @@ export class SearchEditorProvider {
         
         const indexSelect = document.getElementById('indexSelect');
         const searchInput = document.getElementById('searchInput');
-        const searchButton = document.getElementById('searchButton');
-        const resultsCount = document.getElementById('resultsCount');
+        const searchButton = document.getElementById('searchButton');        const resultsCount = document.getElementById('resultsCount');
         const resultsContent = document.getElementById('resultsContent');
         const errorContainer = document.getElementById('errorContainer');
+        const resizeStatus = document.getElementById('resizeStatus');
         
         let currentResults = [];
         
@@ -331,8 +375,7 @@ export class SearchEditorProvider {
             resultsContent.innerHTML = '<div class="loading">Searching...</div>';
             resultsCount.textContent = 'Searching...';
         }
-        
-        function displayResults(results, query) {
+          function displayResults(results, query) {
             currentResults = results;
             
             if (results.length === 0) {
@@ -343,15 +386,27 @@ export class SearchEditorProvider {
             
             resultsCount.textContent = \`\${results.length} result\${results.length === 1 ? '' : 's'} for "\${query}"\`;
             
-            let html = '<div class="results-grid">';
+            let html = '<table class="results-grid">';
             
-            // Header row
+            // Header row with resizable columns
             html += \`
-                <div class="results-header-row">
-                    <div class="results-cell">File Path</div>
-                    <div class="results-cell">File Name</div>
-                    <div class="results-cell">Code Line</div>
-                </div>
+                <thead>
+                    <tr class="results-header-row">
+                        <th class="results-cell column-header column-file-path">
+                            File Path
+                            <div class="column-resizer" data-column="0"></div>
+                        </th>
+                        <th class="results-cell column-header column-file-name">
+                            File Name
+                            <div class="column-resizer" data-column="1"></div>
+                        </th>
+                        <th class="results-cell column-header column-code-line">
+                            Code Line
+                            <div class="column-resizer" data-column="2"></div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
             \`;
             
             // Data rows
@@ -361,23 +416,26 @@ export class SearchEditorProvider {
                 const snippet = result.snippet || result.content || '';
                 
                 html += \`
-                    <div class="results-row" onclick="openFile('\${result.path}', \${lineNumber})">
-                        <div class="results-cell">
+                    <tr class="results-row" onclick="openFile('\${result.path}', \${lineNumber})">
+                        <td class="results-cell column-file-path">
                             <div class="file-path">\${result.path}</div>
-                        </div>
-                        <div class="results-cell">
+                        </td>
+                        <td class="results-cell column-file-name">
                             <div class="file-name">\${fileName}</div>
                             <div class="line-number">Line \${lineNumber}</div>
-                        </div>
-                        <div class="results-cell">
+                        </td>
+                        <td class="results-cell column-code-line">
                             <div class="code-line">\${snippet}</div>
-                        </div>
-                    </div>
+                        </td>
+                    </tr>
                 \`;
             });
             
-            html += '</div>';
+            html += '</tbody></table>';
             resultsContent.innerHTML = html;
+            
+            // Initialize column resizing
+            initializeColumnResizing();
         }
         
         function openFile(filePath, lineNumber) {
@@ -391,9 +449,83 @@ export class SearchEditorProvider {
         function showError(errorMessage) {
             errorContainer.innerHTML = \`<div class="error">Error: \${errorMessage}</div>\`;
         }
-        
-        function clearError() {
+          function clearError() {
             errorContainer.innerHTML = '';
+        }
+        
+        function initializeColumnResizing() {
+            const resizers = document.querySelectorAll('.column-resizer');
+            let isResizing = false;
+            let currentResizer = null;
+            let startX = 0;
+            let startWidth = 0;
+            
+            resizers.forEach(resizer => {
+                resizer.addEventListener('mousedown', initResize);
+            });
+              function initResize(e) {
+                currentResizer = e.target;
+                isResizing = true;
+                startX = e.clientX;
+                
+                const columnIndex = parseInt(currentResizer.dataset.column);
+                const table = document.querySelector('.results-grid');
+                const headerCells = table.querySelectorAll('thead th');
+                startWidth = headerCells[columnIndex].offsetWidth;
+                
+                currentResizer.classList.add('resizing');
+                document.body.classList.add('resizing-active');
+                document.addEventListener('mousemove', doResize);
+                document.addEventListener('mouseup', stopResize);
+                
+                e.preventDefault();
+                e.stopPropagation();
+            }
+              function doResize(e) {
+                if (!isResizing || !currentResizer) return;
+                
+                const columnIndex = parseInt(currentResizer.dataset.column);
+                const table = document.querySelector('.results-grid');
+                const headerCells = table.querySelectorAll('thead th');
+                const targetCell = headerCells[columnIndex];
+                
+                const diff = e.clientX - startX;
+                const newWidth = Math.max(50, startWidth + diff); // Minimum width of 50px
+                const percentage = (newWidth / table.offsetWidth) * 100;
+                
+                // Show resize status
+                const columnNames = ['File Path', 'File Name', 'Code Line'];
+                resizeStatus.textContent = \`Resizing \${columnNames[columnIndex]}: \${Math.round(percentage)}%\`;
+                
+                // Update the specific column class width
+                const className = targetCell.className.split(' ').find(c => c.startsWith('column-'));
+                if (className) {
+                    const style = document.createElement('style');
+                    style.textContent = \`.\${className} { width: \${percentage}% !important; }\`;
+                    
+                    // Remove any existing style for this column
+                    const existingStyle = document.querySelector(\`style[data-column="\${className}"]\`);
+                    if (existingStyle) {
+                        existingStyle.remove();
+                    }
+                    
+                    style.setAttribute('data-column', className);
+                    document.head.appendChild(style);
+                }
+            }            function stopResize(e) {
+                if (!isResizing) return;
+                
+                isResizing = false;
+                document.body.classList.remove('resizing-active');
+                resizeStatus.textContent = ''; // Clear resize status
+                if (currentResizer) {
+                    currentResizer.classList.remove('resizing');
+                    currentResizer = null;
+                }
+                
+                document.removeEventListener('mousemove', doResize);
+                document.removeEventListener('mouseup', stopResize);
+            }
         }
     </script>
 </body>
