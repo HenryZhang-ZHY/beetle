@@ -13,6 +13,9 @@ const resizeStatus = document.getElementById('resizeStatus');
 // State
 let currentResults = [];
 
+// Column width persistence
+const COLUMN_WIDTHS_KEY = 'beetle-search-column-widths';
+
 // Initialize
 init();
 
@@ -28,6 +31,9 @@ function init() {
     
     // Listen for messages from the extension
     window.addEventListener('message', handleMessage);
+    
+    // Apply saved column widths
+    applyColumnWidths();
 }
 
 function handleKeyDown(e) {
@@ -170,9 +176,11 @@ function displayResults(results, query) {
         // Optional: Add visual feedback for clickable rows
         row.style.cursor = 'pointer';
     });
-    
-    // Initialize column resizing
+      // Initialize column resizing
     initializeColumnResizing();
+    
+    // Apply saved column widths
+    applyColumnWidths();
 }
 
 function openFile(filePath, lineNumber) {
@@ -197,6 +205,7 @@ function initializeColumnResizing() {
     let currentResizer = null;
     let startX = 0;
     let startWidth = 0;
+    let currentTable = null;
     
     resizers.forEach(resizer => {
         resizer.addEventListener('mousedown', initResize);
@@ -208,9 +217,10 @@ function initializeColumnResizing() {
         startX = e.clientX;
         
         const columnIndex = parseInt(currentResizer.dataset.column);
-        const table = document.querySelector('.results-grid');
-        const headerCells = table.querySelectorAll('thead th');
-        startWidth = headerCells[columnIndex].offsetWidth;
+        currentTable = document.querySelector('.results-grid');
+        const headerCells = currentTable.querySelectorAll('thead th');
+        const targetCell = headerCells[columnIndex];
+        startWidth = targetCell.offsetWidth;
         
         currentResizer.classList.add('resizing');
         document.body.classList.add('resizing-active');
@@ -220,54 +230,130 @@ function initializeColumnResizing() {
         e.preventDefault();
         e.stopPropagation();
     }
-      function doResize(e) {
-        if (!isResizing || !currentResizer) {
+    
+    function doResize(e) {
+        if (!isResizing || !currentResizer || !currentTable) {
             return;
         }
         
         const columnIndex = parseInt(currentResizer.dataset.column);
-        const table = document.querySelector('.results-grid');
-        const headerCells = table.querySelectorAll('thead th');
+        const headerCells = currentTable.querySelectorAll('thead th');
         const targetCell = headerCells[columnIndex];
         
         const diff = e.clientX - startX;
-        const newWidth = Math.max(50, startWidth + diff); // Minimum width of 50px
-        const percentage = (newWidth / table.offsetWidth) * 100;
+        const minWidth = 80;
+        const newWidth = Math.max(minWidth, startWidth + diff);
+        const tableWidth = currentTable.offsetWidth;
+        const percentage = Math.min(80, Math.max(10, (newWidth / tableWidth) * 100));
         
         // Show resize status
         const columnNames = ['File Path', 'File Name', 'Code Line'];
-        resizeStatus.textContent = `Resizing ${columnNames[columnIndex]}: ${Math.round(percentage)}%`;
+        resizeStatus.textContent = `Resizing ${columnNames[columnIndex]}: ${Math.round(newWidth)}px (${Math.round(percentage)}%)`;
         
-        // Update the specific column class width
+        // Apply the new width directly to the column
         const className = targetCell.className.split(' ').find(c => c.startsWith('column-'));
         if (className) {
-            const style = document.createElement('style');
-            style.textContent = `.${className} { width: ${percentage}% !important; }`;
-            
-            // Remove any existing style for this column
+            // Remove any existing dynamic style for this column
             const existingStyle = document.querySelector(`style[data-column="${className}"]`);
             if (existingStyle) {
                 existingStyle.remove();
             }
             
+            // Create new style
+            const style = document.createElement('style');
+            style.textContent = `
+                .${className} { 
+                    width: ${percentage}% !important; 
+                    min-width: ${minWidth}px !important;
+                }
+            `;
             style.setAttribute('data-column', className);
             document.head.appendChild(style);
         }
+        
+        e.preventDefault();
     }
-      function stopResize(e) {
+    
+    function stopResize(e) {
         if (!isResizing) {
             return;
         }
         
         isResizing = false;
         document.body.classList.remove('resizing-active');
-        resizeStatus.textContent = ''; // Clear resize status
+        
+        // Clear resize status after a delay
+        setTimeout(() => {
+            resizeStatus.textContent = '';
+        }, 1000);
+        
         if (currentResizer) {
             currentResizer.classList.remove('resizing');
             currentResizer = null;
         }
         
+        currentTable = null;
+        
         document.removeEventListener('mousemove', doResize);
         document.removeEventListener('mouseup', stopResize);
+        
+        // Save column widths after resizing
+        saveColumnWidths();
     }
+}
+
+// Add helper functions for persisting column widths
+function saveColumnWidths() {
+    const table = document.querySelector('.results-grid');
+    if (!table) {
+        return;
+    }
+    
+    const headerCells = table.querySelectorAll('thead th');
+    const widths = {};
+    
+    headerCells.forEach((cell, index) => {
+        const className = cell.className.split(' ').find(c => c.startsWith('column-'));
+        if (className) {
+            const width = (cell.offsetWidth / table.offsetWidth) * 100;
+            widths[className] = width;
+        }
+    });
+    
+    try {
+        vscode.setState({ columnWidths: widths });
+    } catch (e) {
+        // Fallback to localStorage if vscode.setState is not available
+        localStorage.setItem(COLUMN_WIDTHS_KEY, JSON.stringify(widths));
+    }
+}
+
+function loadColumnWidths() {
+    try {
+        const state = vscode.getState();
+        return state?.columnWidths || JSON.parse(localStorage.getItem(COLUMN_WIDTHS_KEY) || '{}');
+    } catch (e) {
+        return {};
+    }
+}
+
+function applyColumnWidths() {
+    const savedWidths = loadColumnWidths();
+    
+    Object.entries(savedWidths).forEach(([className, width]) => {
+        const existingStyle = document.querySelector(`style[data-column="${className}"]`);
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+        
+        const style = document.createElement('style');
+        style.textContent = `
+            .${className} { 
+                width: ${width}% !important; 
+                min-width: 80px !important;
+            }
+        `;
+        style.setAttribute('data-column', className);
+        document.head.appendChild(style);
+    });
 }

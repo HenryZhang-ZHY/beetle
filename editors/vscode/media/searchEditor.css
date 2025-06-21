@@ -56,6 +56,18 @@ body {
     overflow: hidden;
 }
 
+/* Results container scrolling */
+#resultsContent {
+    overflow-x: auto;
+    overflow-y: visible;
+    position: relative;
+}
+
+/* Improve table appearance when scrolling */
+.results-grid th:last-child .column-resizer {
+    display: none; /* Hide resizer on last column */
+}
+
 .results-header {
     background-color: var(--vscode-panel-background);
     padding: 10px;
@@ -77,6 +89,7 @@ body {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
+    min-width: 600px;
 }
 
 .results-header-row {
@@ -114,28 +127,39 @@ body {
     position: relative;
     user-select: none;
     cursor: default;
+    border-right: 1px solid var(--vscode-panel-border);
+    transition: background-color 0.2s ease;
+}
+
+.column-header:hover {
+    background-color: var(--vscode-list-hoverBackground);
 }
 
 .column-resizer {
     position: absolute;
     top: 0;
-    right: 0;
-    width: 4px;
+    right: -2px;
+    width: 6px;
     height: 100%;
     cursor: col-resize;
     background-color: transparent;
-    border-right: 1px solid var(--vscode-panel-border);
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    opacity: 0.3;
+    transition: all 0.2s ease;
     z-index: 10;
+    border-right: 2px solid transparent;
 }
 
 .column-header:hover .column-resizer,
 .column-resizer.resizing {
     opacity: 1;
     background-color: var(--vscode-focusBorder);
-    width: 2px;
-    box-shadow: 0 0 2px var(--vscode-focusBorder);
+    border-right: 2px solid var(--vscode-focusBorder);
+    box-shadow: 0 0 3px var(--vscode-focusBorder);
+}
+
+.column-resizer:hover {
+    opacity: 0.8;
+    background-color: var(--vscode-list-hoverBackground);
 }
 
 .column-file-path {
