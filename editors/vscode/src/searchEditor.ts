@@ -3,35 +3,38 @@ import * as fs from 'fs';
 import { BeetleService } from './beetleService';
 import { SearchResult } from './types';
 
-export class SearchEditorProvider {
-    private static readonly viewType = 'beetle.searchEditor';
+export class SearchEditorProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = 'beetleSearchEditor';
     private readonly beetleService: BeetleService;
+    private readonly extensionUri: vscode.Uri;
+    private _view?: vscode.WebviewView;
 
-    constructor(beetleService: BeetleService) {
+    constructor(beetleService: BeetleService, extensionUri: vscode.Uri) {
         this.beetleService = beetleService;
+        this.extensionUri = extensionUri;
     }
 
-    public async openSearchEditor(context: vscode.ExtensionContext) {
-        const panel = vscode.window.createWebviewPanel(
-            SearchEditorProvider.viewType,
-            'Beetle Search Editor',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')]
-            }
-        );
+    public resolveWebviewView(
+        webviewView: vscode.WebviewView,
+        context: vscode.WebviewViewResolveContext,
+        _token: vscode.CancellationToken,
+    ) {
+        this._view = webviewView;        webviewView.webview.options = {
+            enableScripts: true,
+            localResourceRoots: [
+                vscode.Uri.joinPath(this.extensionUri, 'media')
+            ]
+        };
 
-        panel.webview.html = this.getWebviewContent(panel.webview, context.extensionUri);
-        
+        webviewView.webview.html = this.getWebviewContent(webviewView.webview, this.extensionUri);
+
         // Handle messages from the webview
-        panel.webview.onDidReceiveMessage(
+        webviewView.webview.onDidReceiveMessage(
             async (message) => {
                 switch (message.type) {
                     case 'getIndexes':
                         const indexes = await this.beetleService.listIndexes();
-                        panel.webview.postMessage({
+                        webviewView.webview.postMessage({
                             type: 'indexesLoaded',
                             indexes: indexes
                         });
@@ -41,13 +44,13 @@ export class SearchEditorProvider {
                         if (message.indexName && message.query) {
                             try {
                                 const results = await this.beetleService.searchCode(message.indexName, message.query);
-                                panel.webview.postMessage({
+                                webviewView.webview.postMessage({
                                     type: 'searchResults',
                                     results: results,
                                     query: message.query
                                 });
                             } catch (error) {
-                                panel.webview.postMessage({
+                                webviewView.webview.postMessage({
                                     type: 'searchError',
                                     error: error instanceof Error ? error.message : 'Search failed'
                                 });
@@ -69,11 +72,9 @@ export class SearchEditorProvider {
                         }
                         break;
                 }
-            },
-            undefined,
-            context.subscriptions
+            }
         );
-    }    private getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+    }private getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
         // Get the URIs for the HTML, CSS, and JavaScript files
         const htmlUri = vscode.Uri.joinPath(extensionUri, 'media', 'searchEditor.html');
         const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'searchEditor.css'));

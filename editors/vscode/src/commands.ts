@@ -8,9 +8,9 @@ export function registerCommands(
 	context: vscode.ExtensionContext,
 	beetleService: BeetleService,
 	searchResultProvider: SearchResultProvider,
-	indexProvider: IndexProvider
+	indexProvider: IndexProvider,
+	searchEditorProvider: SearchEditorProvider
 ): void {
-	const searchEditorProvider = new SearchEditorProvider(beetleService);
 	
 	const commands = [
 		vscode.commands.registerCommand('beetle.search', async () => {
@@ -168,9 +168,8 @@ export function registerCommands(
 		vscode.commands.registerCommand('beetle.refreshIndexes', () => {
 			indexProvider.refresh();
 		}),
-
 		vscode.commands.registerCommand('beetle.openSearchEditor', async () => {
-			await searchEditorProvider.openSearchEditor(context);
+			await vscode.commands.executeCommand('beetleSearchEditor.focus');
 		}),
 	];
 

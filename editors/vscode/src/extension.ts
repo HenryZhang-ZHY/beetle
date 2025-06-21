@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { BeetleService } from './beetleService';
 import { SearchResultProvider, IndexProvider } from './treeProviders';
+import { SearchEditorProvider } from './searchEditor';
 import { registerCommands } from './commands';
 
 // Global variables
@@ -14,14 +15,21 @@ let indexProvider: IndexProvider;
 // This method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Beetle extension is now active!');
-
 	// Initialize services
 	beetleService = new BeetleService();
 	searchResultProvider = new SearchResultProvider();
 	indexProvider = new IndexProvider(beetleService);
 
+	// Create and register SearchEditorProvider
+	const searchEditorProvider = new SearchEditorProvider(beetleService, context.extensionUri);
+	
 	// Set context for when extension is enabled
 	vscode.commands.executeCommand('setContext', 'beetle.enabled', true);
+
+	// Register WebviewViewProvider for Search Editor
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(SearchEditorProvider.viewType, searchEditorProvider)
+	);
 
 	// Register tree data providers
 	vscode.window.createTreeView('beetleSearch', {
@@ -33,9 +41,8 @@ export function activate(context: vscode.ExtensionContext) {
 		treeDataProvider: indexProvider,
 		showCollapseAll: true
 	});
-
 	// Register commands
-	registerCommands(context, beetleService, searchResultProvider, indexProvider);
+	registerCommands(context, beetleService, searchResultProvider, indexProvider, searchEditorProvider);
 
 	// Add service cleanup
 	context.subscriptions.push(beetleService);

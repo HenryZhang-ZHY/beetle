@@ -44,7 +44,8 @@
         "title": "Delete Index",
         "category": "beetle",
         "icon": "$(trash)"
-      },      {
+      },
+      {
         "command": "beetle.openSearchPanel",
         "title": "Open Search Panel",
         "category": "beetle",
@@ -62,17 +63,25 @@
         "icon": "$(search-editor)"
       }
     ],
-    "views": {
-      "beetle": [
+    "views": {      "beetle": [
+        {
+          "id": "beetleSearchEditor",
+          "name": "Search Editor",
+          "type": "webview",
+          "when": "beetle.enabled",
+          "icon": "$(search-editor)"
+        },
         {
           "id": "beetleSearch",
           "name": "Search Results",
-          "when": "beetle.enabled"
+          "when": "beetle.enabled",
+          "icon": "$(search)"
         },
         {
           "id": "beetleIndexes",
           "name": "Indexes",
-          "when": "beetle.enabled"
+          "when": "beetle.enabled",
+          "icon": "$(database)"
         }
       ]
     },
@@ -84,14 +93,17 @@
           "icon": "$(search-view-icon)"
         }
       ]
-    },
-    "viewsWelcome": [
+    },    "viewsWelcome": [
+      {
+        "view": "beetleSearchEditor",
+        "contents": "Welcome to Beetle Search Editor.\nSearch across your indexed code bases efficiently.\n[Open Search Panel](command:beetle.search)"
+      },
       {
         "view": "beetleSearch",
         "contents": "No search results yet.\n[Search Code](command:beetle.search)"
       },
       {
-        "view": "beetleIndexes", 
+        "view": "beetleIndexes",
         "contents": "No indexes found.\n[Create Index](command:beetle.createIndex)\n[Refresh](command:beetle.refreshIndexes)"
       }
     ],
@@ -112,7 +124,8 @@
         {
           "command": "beetle.deleteIndex",
           "when": "beetle.enabled"
-        },        {
+        },
+        {
           "command": "beetle.openSearchPanel",
           "when": "beetle.enabled"
         },
@@ -120,7 +133,8 @@
           "command": "beetle.openSearchEditor",
           "when": "beetle.enabled"
         }
-      ],      "view/title": [
+      ],
+      "view/title": [
         {
           "command": "beetle.refreshIndexes",
           "when": "view == beetleIndexes",
