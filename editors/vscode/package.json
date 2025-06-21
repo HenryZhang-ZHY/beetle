@@ -1,6 +1,6 @@
 {
   "name": "beetle",
-  "displayName": "Beetle Code Search",
+  "displayName": "beetle Code Search",
   "description": "Lightning-fast source code search and indexing tool for VS Code",
   "version": "0.0.1",
   "engines": {
@@ -24,31 +24,31 @@
       {
         "command": "beetle.search",
         "title": "Search Code",
-        "category": "Beetle",
+        "category": "beetle",
         "icon": "$(search)"
       },
       {
         "command": "beetle.createIndex",
         "title": "Create Index",
-        "category": "Beetle",
+        "category": "beetle",
         "icon": "$(database)"
       },
       {
         "command": "beetle.listIndexes",
         "title": "List Indexes",
-        "category": "Beetle",
+        "category": "beetle",
         "icon": "$(list-unordered)"
       },
       {
         "command": "beetle.deleteIndex",
         "title": "Delete Index",
-        "category": "Beetle",
+        "category": "beetle",
         "icon": "$(trash)"
       },
       {
         "command": "beetle.openSearchPanel",
         "title": "Open Search Panel",
-        "category": "Beetle",
+        "category": "beetle",
         "icon": "$(search-view-icon)"
       },
       {
@@ -75,7 +75,7 @@
       "activitybar": [
         {
           "id": "beetle",
-          "title": "Beetle",
+          "title": "beetle",
           "icon": "$(search-view-icon)"
         }
       ]
@@ -129,7 +129,7 @@
       ]
     },
     "configuration": {
-      "title": "Beetle",
+      "title": "beetle",
       "properties": {
         "beetle.executablePath": {
           "type": "string",

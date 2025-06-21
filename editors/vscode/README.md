@@ -1,6 +1,6 @@
-# Beetle VS Code Extension
+# beetle VS Code Extension
 
-The Beetle VS Code extension brings lightning-fast source code search capabilities directly to your editor. Built on top of the powerful Beetle search engine, this extension allows you to create indexes of your codebases and perform blazing-fast searches without leaving VS Code.
+The beetle VS Code extension brings lightning-fast source code search capabilities directly to your editor. Built on top of the powerful beetle search engine, this extension allows you to create indexes of your codebases and perform blazing-fast searches without leaving VS Code.
 
 ## Features
 
@@ -15,7 +15,7 @@ The Beetle VS Code extension brings lightning-fast source code search capabiliti
 
 ### Prerequisites
 
-You need to have the Beetle CLI tool installed on your system. You can install it from source:
+You need to have the beetle CLI tool installed on your system. You can install it from source:
 
 ```bash
 git clone https://github.com/yourusername/beetle.git
@@ -29,7 +29,7 @@ Make sure `beetle` is available in your PATH, or configure the executable path i
 
 1. Open VS Code
 2. Go to Extensions (Ctrl+Shift+X)
-3. Search for "Beetle Code Search"
+3. Search for "beetle Code Search"
 4. Click Install
 
 ## Quick Start
@@ -39,7 +39,7 @@ Make sure `beetle` is available in your PATH, or configure the executable path i
 Before you can search, you need to create an index of your codebase:
 
 1. Open the Command Palette (Ctrl+Shift+P)
-2. Run "Beetle: Create Index"
+2. Run "beetle: Create Index"
 3. Enter a name for your index
 4. Enter the path to your codebase (defaults to current workspace)
 
@@ -47,23 +47,23 @@ Before you can search, you need to create an index of your codebase:
 
 Once you have an index:
 
-1. Click the Beetle icon in the activity bar, or
-2. Open Command Palette and run "Beetle: Search Code"
+1. Click the beetle icon in the activity bar, or
+2. Open Command Palette and run "beetle: Search Code"
 3. Select an index to search
 4. Enter your search query
 5. Browse results in the search panel
 
 ## Commands
 
-- **Beetle: Search Code** - Search across your indexed codebases
-- **Beetle: Create Index** - Create a new search index
-- **Beetle: List Indexes** - View all available indexes
-- **Beetle: Delete Index** - Remove an index (when supported)
-- **Beetle: Open Search Panel** - Open the Beetle activity panel
+- **beetle: Search Code** - Search across your indexed codebases
+- **beetle: Create Index** - Create a new search index
+- **beetle: List Indexes** - View all available indexes
+- **beetle: Delete Index** - Remove an index (when supported)
+- **beetle: Open Search Panel** - Open the beetle activity panel
 
 ## Configuration
 
-Configure Beetle through VS Code settings:
+Configure beetle through VS Code settings:
 
 ```json
 {
@@ -85,7 +85,7 @@ Configure Beetle through VS Code settings:
 
 ### Search Queries
 
-Beetle supports various search patterns:
+beetle supports various search patterns:
 
 - **Function names**: `function parseJSON`
 - **Multiple terms**: `Result Err unwrap`
@@ -111,11 +111,11 @@ No default keyboard shortcuts are provided, but you can set your own:
 
 ### "Command not found: beetle"
 
-Make sure the Beetle CLI is installed and available in your PATH, or set the correct path in `beetle.executablePath`.
+Make sure the beetle CLI is installed and available in your PATH, or set the correct path in `beetle.executablePath`.
 
 ### "No indexes found"
 
-Create an index first using "Beetle: Create Index" command.
+Create an index first using "beetle: Create Index" command.
 
 ### Search returns no results
 
@@ -125,8 +125,8 @@ Create an index first using "Beetle: Create Index" command.
 
 ## Contributing
 
-This extension is part of the Beetle project. Contributions are welcome!
+This extension is part of the beetle project. Contributions are welcome!
 
 ## License
 
-MIT License - see the main Beetle project for details.
+MIT License - see the main beetle project for details.
