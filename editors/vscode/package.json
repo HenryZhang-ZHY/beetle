@@ -22,12 +22,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "beetle.search",
-        "title": "Search Code",
-        "category": "beetle",
-        "icon": "$(search)"
-      },
-      {
         "command": "beetle.createIndex",
         "title": "Create Index",
         "category": "beetle",
@@ -63,19 +57,14 @@
         "icon": "$(search-editor)"
       }
     ],
-    "views": {      "beetle": [
+    "views": {
+      "beetle": [
         {
           "id": "beetleSearchEditor",
           "name": "Search Editor",
           "type": "webview",
           "when": "beetle.enabled",
           "icon": "$(search-editor)"
-        },
-        {
-          "id": "beetleSearch",
-          "name": "Search Results",
-          "when": "beetle.enabled",
-          "icon": "$(search)"
         },
         {
           "id": "beetleIndexes",
@@ -93,15 +82,8 @@
           "icon": "$(search-view-icon)"
         }
       ]
-    },    "viewsWelcome": [
-      {
-        "view": "beetleSearchEditor",
-        "contents": "Welcome to Beetle Search Editor.\nSearch across your indexed code bases efficiently.\n[Open Search Panel](command:beetle.search)"
-      },
-      {
-        "view": "beetleSearch",
-        "contents": "No search results yet.\n[Search Code](command:beetle.search)"
-      },
+    },
+    "viewsWelcome": [
       {
         "view": "beetleIndexes",
         "contents": "No indexes found.\n[Create Index](command:beetle.createIndex)\n[Refresh](command:beetle.refreshIndexes)"
@@ -109,10 +91,6 @@
     ],
     "menus": {
       "commandPalette": [
-        {
-          "command": "beetle.search",
-          "when": "beetle.enabled"
-        },
         {
           "command": "beetle.createIndex",
           "when": "beetle.enabled"

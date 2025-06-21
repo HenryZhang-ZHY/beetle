@@ -13,49 +13,6 @@ export function registerCommands(
 ): void {
 	
 	const commands = [
-		vscode.commands.registerCommand('beetle.search', async () => {
-			const indexes = await beetleService.listIndexes();
-			if (indexes.length === 0) {
-				const create = await vscode.window.showInformationMessage(
-					'No indexes found. Would you like to create one?',
-					'Create Index'
-				);
-				if (create) {
-					vscode.commands.executeCommand('beetle.createIndex');
-				}
-				return;
-			}
-
-			const selectedIndex = await vscode.window.showQuickPick(
-				indexes.map(idx => idx.name),
-				{ placeHolder: 'Select an index to search' }
-			);
-
-			if (!selectedIndex) { return; }
-
-			const query = await vscode.window.showInputBox({
-				placeHolder: 'Enter your search query',
-				prompt: 'Search for code patterns, functions, or text'
-			});
-
-			if (!query) { return; }
-
-			vscode.window.withProgress({
-				location: vscode.ProgressLocation.Notification,
-				title: 'Searching code...',
-				cancellable: false
-			}, async () => {
-				const results = await beetleService.searchCode(selectedIndex, query);
-				searchResultProvider.updateResults(query, results);
-
-				if (results.length === 0) {
-					vscode.window.showInformationMessage(`No results found for "${query}"`);
-				} else {
-					vscode.window.showInformationMessage(`Found ${results.length} results for "${query}"`);
-				}
-			});
-		}),
-
 		vscode.commands.registerCommand('beetle.createIndex', async () => {
 			const name = await vscode.window.showInputBox({
 				placeHolder: 'Enter index name',
