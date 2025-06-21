@@ -47,7 +47,6 @@ export class SearchResultItem extends vscode.TreeItem {
 		this.tooltip = `${result.path}\nScore: ${result.score}`;
 		this.description = result.snippet.trim().substring(0, 50) + '...';
 		this.resourceUri = vscode.Uri.file(result.path);
-
 		this.command = {
 			command: 'vscode.open',
 			title: 'Open File',
@@ -55,8 +54,8 @@ export class SearchResultItem extends vscode.TreeItem {
 				vscode.Uri.file(result.path),
 				{
 					selection: new vscode.Range(
-						1, 0,
-						1, 100
+						Math.max(0, (result.line_number || 1) - 1), 0,
+						Math.max(0, (result.line_number || 1) - 1), 100
 					)
 				}
 			]

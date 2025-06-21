@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { BeetleService } from './beetleService';
 import { SearchResultProvider, IndexProvider, IndexItem } from './treeProviders';
+import { SearchEditorProvider } from './searchEditor';
 
 export function registerCommands(
 	context: vscode.ExtensionContext,
@@ -157,6 +158,11 @@ export function registerCommands(
 
 		vscode.commands.registerCommand('beetle.refreshIndexes', () => {
 			indexProvider.refresh();
+		}),
+
+		vscode.commands.registerCommand('beetle.openSearchEditor', () => {
+			const searchEditorProvider = new SearchEditorProvider(beetleService);
+			searchEditorProvider.openSearchEditor(context);
 		})
 	];
 

@@ -44,8 +44,7 @@
         "title": "Delete Index",
         "category": "beetle",
         "icon": "$(trash)"
-      },
-      {
+      },      {
         "command": "beetle.openSearchPanel",
         "title": "Open Search Panel",
         "category": "beetle",
@@ -55,6 +54,12 @@
         "command": "beetle.refreshIndexes",
         "title": "Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "beetle.openSearchEditor",
+        "title": "Open New Search Editor",
+        "category": "beetle",
+        "icon": "$(search-editor)"
       }
     ],
     "views": {
@@ -107,16 +112,23 @@
         {
           "command": "beetle.deleteIndex",
           "when": "beetle.enabled"
-        },
-        {
+        },        {
           "command": "beetle.openSearchPanel",
           "when": "beetle.enabled"
+        },
+        {
+          "command": "beetle.openSearchEditor",
+          "when": "beetle.enabled"
         }
-      ],
-      "view/title": [
+      ],      "view/title": [
         {
           "command": "beetle.refreshIndexes",
           "when": "view == beetleIndexes",
+          "group": "navigation"
+        },
+        {
+          "command": "beetle.openSearchEditor",
+          "when": "view == beetleSearch",
           "group": "navigation"
         }
       ],
