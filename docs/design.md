@@ -213,3 +213,13 @@ Test fixtures include sample repositories with:
 - **🌐 Web Interface**: Browser-based search interface for teams
 
 This design document serves as both a technical specification and a development guide, ensuring that beetle remains focused on its core mission of providing fast, reliable code search while maintaining a clear path for future enhancements.
+
+# Todo List
+
+## VSCode Extension
+
+- [ ] columns are resizable
+- [ ] can run query from multiple indexes
+- [ ] search results and the corresponding query are saved in the history and can be reused
+
+- [ ] Highlight matching terms in search results
