@@ -72,6 +72,12 @@ function populateIndexes(indexes) {
         option.textContent = index.name + (index.file_count ? ` (${index.file_count} files)` : '');
         indexSelect.appendChild(option);
     });
+    
+    // Auto-select the first index if available
+    if (indexes.length > 0) {
+        indexSelect.value = indexes[0].name;
+    }
+    
     updateSearchButtonState();
 }
 

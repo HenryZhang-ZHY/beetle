@@ -218,6 +218,8 @@ This design document serves as both a technical specification and a development 
 
 ## VSCode Extension
 
+- [ ] It should select the first index by default when opening the search panel
+- [ ] I can jump to the correct position when opening a file from the search results
 - [ ] use vue for the UI
 - [ ] columns are resizable
 - [ ] can run query from multiple indexes
