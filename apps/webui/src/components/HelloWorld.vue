@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button'
+
 defineProps<{
   msg: string
 }>()
 </script>
 
 <template>
+  <Button>asd</Button>
   <div class="greetings">
     <h1 class="green">{{ msg }}</h1>
     <h3>
