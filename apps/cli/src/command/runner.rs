@@ -1,10 +1,10 @@
-use axum::{routing::get, Router};
 use beetle_engine::{new_index, IndexManager, IndexingOptions};
 
 use std::path::PathBuf;
 
 use super::{BeetleCommand, JsonFormatter, OutputFormat, PlainTextFormatter, ResultFormatter};
 use crate::cli::{CliRunResult, Runner};
+use crate::server::HttpServer;
 
 pub struct BeetleRunner {
     options: BeetleCommand,
@@ -23,39 +23,6 @@ impl BeetleRunner {
     fn get_index_path(index_name: &str) -> PathBuf {
         let beetle_home = Self::get_beetle_home();
         PathBuf::from(beetle_home).join("indexes").join(index_name)
-    }
-
-    fn start_server(port: u16) -> CliRunResult {
-        // Since we can't make this method async, we'll use a runtime
-        let rt = tokio::runtime::Runtime::new().unwrap();
-
-        rt.block_on(async move {
-            // Build our application with a simple hello world route
-            let app = Router::new().route("/", get(|| async { "hello world" }));
-
-            // Create the address
-            let addr = format!("{}:{}", "localhost", port);
-
-            // Create a TCP listener
-            let listener = match tokio::net::TcpListener::bind(&addr).await {
-                Ok(listener) => listener,
-                Err(e) => {
-                    return CliRunResult::PlainTextResult(format!(
-                        "Failed to bind to {}: {}",
-                        addr, e
-                    ));
-                }
-            };
-
-            println!("Server running on http://{}", addr);
-
-            // Start the server
-            if let Err(e) = axum::serve(listener, app).await {
-                CliRunResult::PlainTextResult(format!("Server error: {}", e))
-            } else {
-                CliRunResult::PlainTextResult("Server stopped".to_string())
-            }
-        })
     }
 }
 
@@ -179,7 +146,7 @@ impl Runner for BeetleRunner {
                     )
                 }
             }
-            BeetleCommand::Serve { port } => Self::start_server(port),
+            BeetleCommand::Serve { port } => HttpServer::start(port),
         }
     }
 }

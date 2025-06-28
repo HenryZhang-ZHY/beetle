@@ -1,6 +1,7 @@
 mod command;
 mod result;
 mod runner;
+mod server;
 
 pub mod cli {
     pub use crate::{
