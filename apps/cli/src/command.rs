@@ -5,6 +5,7 @@ mod new;
 mod option;
 mod runner;
 mod search;
+mod serve;
 mod update;
 
 pub use runner::BeetleRunner;
@@ -20,6 +21,7 @@ use delete::delete_command;
 use list::list_command;
 use new::new_command;
 use search::search_command;
+use serve::serve_command;
 use update::update_command;
 
 /// Output format for search results
@@ -60,6 +62,11 @@ pub enum BeetleCommand {
         /// Whether to perform full reindex
         reindex: bool,
     },
+    /// Start HTTP server
+    Serve {
+        /// Port to bind the server to
+        port: u16,
+    },
 }
 
 pub fn beetle_command() -> OptionParser<BeetleCommand> {
@@ -83,7 +90,11 @@ pub fn beetle_command() -> OptionParser<BeetleCommand> {
         .command("update")
         .help("Update an existing index with new changes or reindex");
 
-    construct!([new, search, list, delete, update])
+    let serve = serve_command()
+        .command("serve")
+        .help("Start HTTP server for search API");
+
+    construct!([new, search, list, delete, update, serve])
         .to_options()
         .descr("Beetle - Source Code Repository Indexing Tool")
         .header("Efficiently index and query source code repositories")
