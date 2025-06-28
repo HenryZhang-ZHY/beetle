@@ -9,6 +9,7 @@ use axum::{
 use beetle_engine::IndexManager;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use tokio::signal;
 
 #[derive(Serialize)]
 struct IndexResponse {
@@ -63,7 +64,7 @@ async fn list_indexes() -> ResponseJson<Vec<IndexResponse>> {
     let beetle_home = get_beetle_home();
     let index_path = PathBuf::from(beetle_home);
     let index_manager = IndexManager::new(index_path);
-    
+
     match index_manager.list_indexes() {
         Ok(indexes) => {
             let response: Vec<IndexResponse> = indexes
@@ -83,11 +84,13 @@ async fn list_indexes() -> ResponseJson<Vec<IndexResponse>> {
 }
 
 // GET /indexes/{index_name} - Get specific index details
-async fn get_index_details(Path(index_name): Path<String>) -> Result<ResponseJson<IndexDetailResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
+async fn get_index_details(
+    Path(index_name): Path<String>,
+) -> Result<ResponseJson<IndexDetailResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     let beetle_home = get_beetle_home();
     let index_path = PathBuf::from(beetle_home);
     let index_manager = IndexManager::new(index_path);
-    
+
     match index_manager.list_indexes() {
         Ok(indexes) => {
             if let Some(index_info) = indexes.into_iter().find(|idx| idx.name == index_name) {
@@ -124,13 +127,15 @@ async fn search_index(
     Query(params): Query<SearchQuery>,
 ) -> Result<ResponseJson<SearchResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     let beetle_home = get_beetle_home();
-    let index_path = PathBuf::from(&beetle_home).join("indexes").join(&index_name);
+    let index_path = PathBuf::from(&beetle_home)
+        .join("indexes")
+        .join(&index_name);
     let index_manager = IndexManager::new(index_path);
-    
+
     // Check if index exists first
     let beetle_index_path = PathBuf::from(beetle_home);
     let beetle_index_manager = IndexManager::new(beetle_index_path);
-    
+
     match beetle_index_manager.list_indexes() {
         Ok(indexes) => {
             if !indexes.iter().any(|idx| idx.name == index_name) {
@@ -151,7 +156,7 @@ async fn search_index(
             ));
         }
     }
-    
+
     // Perform search
     match index_manager.search(&params.q) {
         Ok(search_results) => {
@@ -166,9 +171,9 @@ async fn search_index(
                     line_number: None, // Not available in current SearchResult
                 })
                 .collect();
-            
+
             let total_results = results.len();
-            
+
             let response = SearchResponse {
                 query: params.q,
                 index_name,
@@ -176,7 +181,7 @@ async fn search_index(
                 total_results,
                 limit,
             };
-            
+
             Ok(ResponseJson(response))
         }
         Err(_) => Err((
@@ -186,6 +191,32 @@ async fn search_index(
             }),
         )),
     }
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    println!("Received shutdown signal, stopping server gracefully...");
 }
 
 fn get_beetle_home() -> String {
@@ -229,11 +260,14 @@ impl HttpServer {
 
             println!("Server running on http://{}", addr);
 
-            // Start the server
-            if let Err(e) = axum::serve(listener, app).await {
-                CliRunResult::PlainTextResult(format!("Server error: {}", e))
-            } else {
-                CliRunResult::PlainTextResult("Server stopped".to_string())
+            // Start the server with graceful shutdown
+            let result = axum::serve(listener, app)
+                .with_graceful_shutdown(shutdown_signal())
+                .await;
+
+            match result {
+                Ok(_) => CliRunResult::PlainTextResult("Server stopped gracefully".to_string()),
+                Err(e) => CliRunResult::PlainTextResult(format!("Server error: {}", e)),
             }
         })
     }
