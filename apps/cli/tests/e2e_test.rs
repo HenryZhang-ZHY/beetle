@@ -22,7 +22,7 @@ use tempfile::TempDir;
 /// * `Result<Value, Box<dyn std::error::Error>>` - Parsed JSON response or error
 fn execute_search(index_name: &str, query: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let search_output = Command::cargo_bin("beetle")?
-        .args(&["search", "-i", index_name, "-q", query, "--format", "json"])
+        .args(["search", "-i", index_name, "-q", query, "--format", "json"])
         .output()?;
 
     if !search_output.status.success() {
@@ -141,7 +141,7 @@ fn test_c_programmer_onboarding() {
     // Act: Create new beetle index for the C project
     let new_output = Command::cargo_bin("beetle")
         .unwrap()
-        .args(&[
+        .args([
             "new",
             "-i",
             "c_project_add",

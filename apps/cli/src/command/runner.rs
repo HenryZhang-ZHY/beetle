@@ -12,14 +12,12 @@ pub struct BeetleRunner {
 
 impl BeetleRunner {
     fn get_beetle_home() -> String {
-        let beetle_home = std::env::var("BEETLE_HOME").unwrap_or_else(|_| {
+        std::env::var("BEETLE_HOME").unwrap_or_else(|_| {
             let home_dir = std::env::var("HOME")
                 .or_else(|_| std::env::var("USERPROFILE"))
                 .unwrap_or_else(|_| ".".to_string());
             format!("{}/.beetle", home_dir)
-        });
-
-        return beetle_home;
+        })
     }
 
     fn get_index_path(index_name: &str) -> PathBuf {
@@ -145,21 +143,18 @@ impl Runner for BeetleRunner {
 
                 if index_path.exists() {
                     if std::fs::remove_dir_all(&index_path).is_ok() {
-                        return CliRunResult::PlainTextResult(format!(
+                        CliRunResult::PlainTextResult(format!(
                             "Index '{}' deleted successfully",
                             index_name
-                        ));
+                        ))
                     } else {
-                        return CliRunResult::PlainTextResult(format!(
+                        CliRunResult::PlainTextResult(format!(
                             "Failed to delete index '{}'. Please check permissions.",
                             index_name
-                        ));
+                        ))
                     }
                 } else {
-                    return CliRunResult::PlainTextResult(format!(
-                        "Index '{}' does not exist",
-                        index_name
-                    ));
+                    CliRunResult::PlainTextResult(format!("Index '{}' does not exist", index_name))
                 }
             }
             BeetleCommand::Update {
@@ -179,9 +174,9 @@ impl Runner for BeetleRunner {
                         index_name
                     ))
                 } else {
-                    CliRunResult::PlainTextResult(format!(
-                        "Please specify either --incremental or --reindex for update"
-                    ))
+                    CliRunResult::PlainTextResult(
+                        "Please specify either --incremental or --reindex for update".to_string(),
+                    )
                 }
             }
             BeetleCommand::Serve { port } => Self::start_server(port),
