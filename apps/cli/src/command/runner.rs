@@ -53,7 +53,7 @@ impl Runner for BeetleRunner {
                     Err(e) => CliRunResult::PlainTextResult(format!("Error creating index: {}", e)),
                 }
             }
-            BeetleCommand::Query {
+            BeetleCommand::Search {
                 index_name,
                 query,
                 formatter,

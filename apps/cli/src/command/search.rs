@@ -17,7 +17,7 @@ pub fn search_command() -> OptionParser<BeetleCommand> {
         })
         .fallback(OutputFormat::Text);
 
-    construct!(BeetleCommand::Query {
+    construct!(BeetleCommand::Search {
         index_name(),
         query,
         formatter

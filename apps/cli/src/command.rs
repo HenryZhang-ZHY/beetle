@@ -42,7 +42,7 @@ pub enum BeetleCommand {
         path_to_be_indexed: PathBuf,
     },
     /// Query an existing index
-    Query {
+    Search {
         index_name: String,
         query: String,
         formatter: OutputFormat,
@@ -140,7 +140,7 @@ mod tests {
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::Query {
+            BeetleCommand::Search {
                 index_name,
                 query,
                 formatter,
@@ -160,7 +160,7 @@ mod tests {
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::Query { formatter, .. } => {
+            BeetleCommand::Search { formatter, .. } => {
                 matches!(formatter, OutputFormat::Json);
             }
             _ => panic!("Expected Query command"),
@@ -309,7 +309,7 @@ mod tests {
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::Query {
+            BeetleCommand::Search {
                 index_name, query, ..
             } => {
                 assert_eq!(index_name, "");
@@ -335,7 +335,7 @@ mod tests {
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::Query { query, .. } => {
+            BeetleCommand::Search { query, .. } => {
                 assert_eq!(query, "你好 world 🦀");
             }
             _ => panic!("Expected Query command"),
