@@ -45,6 +45,20 @@ struct SearchResultItem {
     content: String,
     score: f32,
     line_number: Option<u32>,
+    snippets: Vec<Snippet>,
+}
+
+#[derive(Serialize)]
+struct Snippet {
+    start: usize,
+    end: usize,
+
+    starting_line_number: usize,
+    ending_line_number: usize,
+
+    jump_to_line_number: usize,
+
+    lines: Vec<String>
 }
 
 #[derive(Serialize)]
@@ -169,6 +183,7 @@ async fn search_index(
                     content: result.snippet,
                     score: result.score,
                     line_number: None, // Not available in current SearchResult
+                    snippets: vec![],
                 })
                 .collect();
 
