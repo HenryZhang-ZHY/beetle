@@ -10,7 +10,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0"
 axum = "0.8.4"
-beetle_engine = { path = "../../crates/beetle_engine" }
+engine = { path = "../../crates/engine" }
 bpaf = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

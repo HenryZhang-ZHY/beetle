@@ -17,7 +17,7 @@ use crate::schema::IndexSchema;
 /// # Examples
 ///
 /// ```rust
-/// use beetle_engine::IndexingOptions;
+/// use engine::IndexingOptions;
 ///
 /// // Default behavior - respects .gitignore files
 /// let options = IndexingOptions::new();

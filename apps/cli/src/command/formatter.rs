@@ -6,7 +6,7 @@ pub use json::JsonFormatter;
 pub use text::PlainTextFormatter;
 pub use utils::format_size;
 
-use beetle_engine::{IndexingStats, SearchResult};
+use engine::{IndexingStats, SearchResult};
 
 pub trait ResultFormatter {
     fn format_search_results(&self, query: &str, results: &[SearchResult]) -> String;

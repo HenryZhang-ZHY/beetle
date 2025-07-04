@@ -146,7 +146,7 @@ beetle/
 │       │   └── ...
 │       └── Cargo.toml
 ├── crates/
-│   └── beetle_engine/         # Core search engine
+│   └── engine/         # Core search engine
 │       ├── src/
 │       │   ├── lib.rs         # Public API
 │       │   ├── index_manager.rs
@@ -166,7 +166,7 @@ beetle/
 
 ### Test Categories
 
-**Unit Tests**: Core functionality in `beetle_engine`
+**Unit Tests**: Core functionality in `engine`
 - Index creation and management
 - Search result ranking and formatting
 - Document processing and schema validation

@@ -158,7 +158,7 @@ pub struct IndexingStats { file_count: u64, total_size: u64, duration_ms: u64 }
 
 | # | Task (≈ 30 min each) | Deliverable / Test | Status |
 |---|----------------------|--------------------|--------|
-| 1 | Create empty `beetle_engine` crate/modules; run `cargo check`. | Workspace compiles. | TODO |
+| 1 | Create empty `engine` crate/modules; run `cargo check`. | Workspace compiles. | TODO |
 | 2 | Implement `schema.rs`: `IndexSchema::create`, `CONTENT_FIELD`, `PATH_FIELD`. | Unit test passes. | TODO |
 | 3 | Declare `trait IndexStorage` and stub `FsStorage { root }`. | Compiles. | TODO |
 | 4 | Implement `FsStorage::index_dir / create / open`. | `storage_create_open` test. | TODO |

@@ -88,7 +88,7 @@ beetle delete --index <NAME>
 
 ## 🏗️ Architecture & Storage
 
-**Architecture**: beetle uses a layered design with a core engine (`beetle_engine`), CLI tool, and VS Code extension.
+**Architecture**: beetle uses a layered design with a core engine (`engine`), CLI tool, and VS Code extension.
 
 **Storage**: Indexes are stored in `~/.beetle/` by default. Customize with the `BEETLE_HOME` environment variable.
 
@@ -120,7 +120,7 @@ cargo build --release  # Build release
 
 ```bash
 cargo test                           # All tests
-cargo test --package beetle_engine  # Engine tests only
+cargo test --package engine  # Engine tests only
 cargo test --package beetle         # CLI tests only
 ```
 

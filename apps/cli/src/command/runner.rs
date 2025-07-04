@@ -1,4 +1,4 @@
-use beetle_engine::{new_index, IndexManager, IndexingOptions};
+use engine::{new_index, IndexManager, IndexingOptions};
 
 use std::path::PathBuf;
 
@@ -129,7 +129,7 @@ impl Runner for BeetleRunner {
                 incremental,
                 reindex,
             } => {
-                // TODO: Implement update_index in beetle_engine
+                // TODO: Implement update_index in engine
                 if incremental {
                     CliRunResult::PlainTextResult(format!(
                         "Incremental update of index '{}' is not yet implemented",

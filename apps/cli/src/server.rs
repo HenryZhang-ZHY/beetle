@@ -6,7 +6,7 @@ use axum::{
     routing::get,
     Router,
 };
-use beetle_engine::IndexManager;
+use engine::IndexManager;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::signal;

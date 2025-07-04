@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "apps/cli",
-    "crates/beetle_engine",
+    "crates/engine",
 ]
 resolver = "2"
 
