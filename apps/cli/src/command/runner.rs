@@ -97,9 +97,9 @@ impl Runner for BeetleRunner {
                 }
             }
 
-            BeetleCommand::Delete { index_name } => match self.catalog.remove(&index_name) {
+            BeetleCommand::Remove { index_name } => match self.catalog.remove(&index_name) {
                 Ok(_) => CliRunResult::PlainTextResult(format!(
-                    "Index '{}' deleted successfully",
+                    "Index '{}' removed successfully",
                     index_name
                 )),
                 Err(e) => CliRunResult::PlainTextResult(format!("{}", e)),

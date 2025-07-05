@@ -34,7 +34,7 @@
         "icon": "$(list-unordered)"
       },
       {
-        "command": "beetle.deleteIndex",
+        "command": "beetle.removeIndex",
         "title": "Delete Index",
         "category": "beetle",
         "icon": "$(trash)"
@@ -100,7 +100,7 @@
           "when": "beetle.enabled"
         },
         {
-          "command": "beetle.deleteIndex",
+          "command": "beetle.removeIndex",
           "when": "beetle.enabled"
         },
         {
@@ -126,7 +126,7 @@
       ],
       "view/item/context": [
         {
-          "command": "beetle.deleteIndex",
+          "command": "beetle.removeIndex",
           "when": "view == beetleIndexes && viewItem == index",
           "group": "inline"
         }

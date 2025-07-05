@@ -120,15 +120,15 @@ export class BeetleService {
 		}
 	}
 
-	async deleteIndex(name: string): Promise<boolean> {
+	async removeIndex(name: string): Promise<boolean> {
 		try {
-			const result = await this.executeBeetleCommand(['delete', '--index', name]);
+			const result = await this.executeBeetleCommand(['remove', '--index', name]);
 
 			if (result.success) {
-				vscode.window.showInformationMessage(`Index "${name}" deleted successfully!`);
+				vscode.window.showInformationMessage(`Index "${name}" removed successfully!`);
 				return true;
 			} else {
-				vscode.window.showErrorMessage(`Failed to delete index: ${result.output}`);
+				vscode.window.showErrorMessage(`Failed to remove index: ${result.output}`);
 				return false;
 			}
 		} catch (error) {

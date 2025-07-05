@@ -62,7 +62,7 @@ beetle search --index myproject --query "main" --format json
 | `new` | Create a new index | ✅ |
 | `search` | Search within an index | ✅ |
 | `list` | List all indexes | ✅ |
-| `delete` | Delete an index | ✅ |
+| `remove` | Delete an index | ✅ |
 | `update` | Update an index | 🚧 Planned |
 
 ### Command Examples
@@ -81,7 +81,7 @@ beetle search --index <NAME> --query <QUERY> --format json
 beetle list
 
 # Delete index
-beetle delete --index <NAME>
+beetle remove --index <NAME>
 ```
 
 > 📖 **For detailed command documentation and usage examples, see [docs/design.md](docs/design.md)**

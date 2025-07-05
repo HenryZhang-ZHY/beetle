@@ -175,11 +175,11 @@ pub struct IndexingStats { file_count: u64, total_size: u64, duration_ms: u64 }
 |15 | Implement `index_catalog.rs` with caches, `list/reader/writer/remove`. | Multi-thread test. | TODO |
 |16 | Swap cache to `dashmap` / optimize; micro-benchmark. | No perf regression. | TODO |
 |17 | Implement `index_searcher.rs` (`search`, `reload`). | Query test. | TODO |
-|18 | Create `beetle_cli` crate; add `clap` skeleton (`new/update/search/list/delete`). | `beetle --help`. | TODO |
+|18 | Create `beetle_cli` crate; add `clap` skeleton (`new/update/search/list/remove`). | `beetle --help`. | TODO |
 |19 | Wire CLI `new` to `IndexUpdater::update` (initial build). | Manual run ok. | TODO |
 |20 | Wire CLI `update` to incremental update. | Modify file → result updated. | TODO |
 |21 | Wire CLI `search` to `IndexSearcher`. | Returns paths. | TODO |
-|22 | Wire CLI `list/delete` to catalog. | Index dirs change. | TODO |
+|22 | Wire CLI `list/remove` to catalog. | Index dirs change. | TODO |
 |23 | Deprecate/remove old `IndexManager`; shim to new impl. | Tests pass. | TODO |
 |24 | Update docs (`design.md`, README, Mermaid). | Render OK. | TODO |
 |25 | Raise test coverage to > 80 %. | `tarpaulin` report. | TODO |

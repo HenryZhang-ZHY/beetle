@@ -77,7 +77,7 @@ export function registerCommands(
 				placeHolder: 'Available indexes'
 			});
 		}),
-		vscode.commands.registerCommand('beetle.deleteIndex', async (item?: IndexItem) => {
+		vscode.commands.registerCommand('beetle.removeIndex', async (item?: IndexItem) => {
 			let indexName: string;
 
 			if (item) {
@@ -91,7 +91,7 @@ export function registerCommands(
 
 				const selected = await vscode.window.showQuickPick(
 					indexes.map(idx => idx.name),
-					{ placeHolder: 'Select an index to delete' }
+					{ placeHolder: 'Select an index to remove' }
 				);
 
 				if (!selected) { return; }
@@ -99,7 +99,7 @@ export function registerCommands(
 			}
 
 			const confirm = await vscode.window.showWarningMessage(
-				`Are you sure you want to delete the index "${indexName}"?`,
+				`Are you sure you want to remove the index "${indexName}"?`,
 				{ modal: true },
 				'Delete'
 			);
@@ -110,7 +110,7 @@ export function registerCommands(
 					title: `Deleting index "${indexName}"...`,
 					cancellable: false
 				}, async () => {
-					const success = await beetleService.deleteIndex(indexName);
+					const success = await beetleService.removeIndex(indexName);
 					if (success) {
 						indexProvider.refresh();
 					}

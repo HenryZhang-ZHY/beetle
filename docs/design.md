@@ -43,7 +43,7 @@ beetle provides a comprehensive command-line interface with the following comman
 | `new` | Create a new index for a specified directory | ✅ Implemented |
 | `search` | Search within an existing index | ✅ Implemented |
 | `list` | Display all available indexes | ✅ Implemented |
-| `delete` | Remove an index from the system | ✅ Implemented |
+| `remove` | Remove an index from the system | ✅ Implemented |
 | `update` | Update an existing index with incremental or full reindex | 🚧 Planned |
 
 ### Command Usage Examples
@@ -62,7 +62,7 @@ beetle search --index my-project --query "Result Err" --format json
 beetle list
 
 # Delete an index when no longer needed
-beetle delete --index old-project
+beetle remove --index old-project
 
 # Planned: Incremental update
 beetle update --index my-project --incremental
@@ -79,7 +79,7 @@ beetle update --index my-project --reindex
 2. **Index Creation**: Create an index for their active project or multiple projects
 3. **Daily Usage**: Use search functionality to find code patterns, functions, TODOs, etc.
 4. **Index Maintenance**: Periodically update indexes as codebases evolve (planned)
-5. **Project Management**: Create/delete indexes as projects are added/removed
+5. **Project Management**: Create/remove indexes as projects are added/removed
 
 ### Search Use Cases
 

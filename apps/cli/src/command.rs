@@ -1,8 +1,8 @@
-mod delete;
 mod formatter;
 mod list;
 mod new;
 mod option;
+mod remove;
 mod runner;
 mod search;
 mod serve;
@@ -17,9 +17,9 @@ pub use option::index_name;
 use bpaf::*;
 use std::path::PathBuf;
 
-use delete::delete_command;
 use list::list_command;
 use new::new_command;
+use remove::remove_command;
 use search::search_command;
 use serve::serve_command;
 use update::update_command;
@@ -49,8 +49,8 @@ pub enum BeetleCommand {
     },
     List,
     /// Delete an existing index
-    Delete {
-        /// Name of the index to delete
+    Remove {
+        /// Name of the index to remove
         index_name: String,
     },
     /// Update an existing index
@@ -82,8 +82,8 @@ pub fn beetle_command() -> OptionParser<BeetleCommand> {
         .command("list")
         .help("Display all available indexes");
 
-    let delete = delete_command()
-        .command("delete")
+    let remove = remove_command()
+        .command("remove")
         .help("Remove an index from the system");
 
     let update = update_command()
@@ -94,7 +94,7 @@ pub fn beetle_command() -> OptionParser<BeetleCommand> {
         .command("serve")
         .help("Start HTTP server for search API");
 
-    construct!([new, search, list, delete, update, serve])
+    construct!([new, search, list, remove, update, serve])
         .to_options()
         .descr("Beetle - Source Code Repository Indexing Tool")
         .header("Efficiently index and query source code repositories")
@@ -182,22 +182,22 @@ mod tests {
     }
 
     #[test]
-    fn test_delete_command_parsing() {
+    fn test_remove_command_parsing() {
         let parser = beetle_command();
 
-        let args = Args::from(&["delete", "--index", "old-index"]);
+        let args = Args::from(&["remove", "--index", "old-index"]);
         let result = parser.run_inner(args);
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::Delete { index_name } => {
+            BeetleCommand::Remove { index_name } => {
                 assert_eq!(index_name, "old-index");
             }
             _ => panic!("Expected Delete command"),
         }
 
         // Test missing index argument
-        let args = Args::from(&["delete"]);
+        let args = Args::from(&["remove"]);
         let result = parser.run_inner(args);
         assert!(result.is_err());
     }
