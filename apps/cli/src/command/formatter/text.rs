@@ -1,9 +1,10 @@
-use super::{format_size, IndexingStats, ResultFormatter, SearchResult};
+use super::{format_size, IndexingStats, ResultFormatter};
+use engine::SearchResultItem;
 
 pub struct PlainTextFormatter;
 
 impl ResultFormatter for PlainTextFormatter {
-    fn format_search_results(&self, query: &str, results: &[SearchResult]) -> String {
+    fn format_search_results(&self, query: &str, results: &[SearchResultItem]) -> String {
         if results.is_empty() {
             return format!("No results found for query: '{}'", query);
         }

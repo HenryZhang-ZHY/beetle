@@ -1,4 +1,5 @@
-use super::{IndexingStats, ResultFormatter, SearchResult};
+use super::{IndexingStats, ResultFormatter};
+use engine::SearchResultItem;
 
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +29,7 @@ impl JsonFormatter {
 }
 
 impl ResultFormatter for JsonFormatter {
-    fn format_search_results(&self, query: &str, results: &[SearchResult]) -> String {
+    fn format_search_results(&self, query: &str, results: &[SearchResultItem]) -> String {
         let output = SearchOutput {
             query: query.to_string(),
             count: results.len(),

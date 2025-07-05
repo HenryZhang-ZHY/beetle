@@ -48,26 +48,21 @@ impl Runner for BeetleRunner {
                 query,
                 formatter,
             } => {
-                let index_path: PathBuf = BeetleRunner::get_index_path(&index_name);
-                let index_manager = IndexManager::new(index_path);
-
-                let search_result = index_manager.search(&query);
-
+                let mut searcher = self.catalog.get_searcher(&index_name).unwrap();
+                let search_result = searcher.search(&query).unwrap();
                 match formatter {
                     OutputFormat::Text => {
-                        let results = search_result.unwrap();
                         let text_formatter = PlainTextFormatter;
 
                         CliRunResult::PlainTextResult(
-                            text_formatter.format_search_results(&query, &results),
+                            text_formatter.format_search_results(&query, &search_result),
                         )
                     }
                     OutputFormat::Json => {
-                        let results = search_result.unwrap();
                         let json_formatter = JsonFormatter::new(true);
 
                         CliRunResult::PlainTextResult(
-                            json_formatter.format_search_results(&query, &results),
+                            json_formatter.format_search_results(&query, &search_result),
                         )
                     }
                 }
