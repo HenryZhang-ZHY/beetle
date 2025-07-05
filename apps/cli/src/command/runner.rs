@@ -1,27 +1,20 @@
-use engine::{new_index, IndexManager, IndexingOptions};
+use axum::extract::path;
+use engine::{new_index, FsStorage, IndexCatalog, IndexManager, IndexingOptions};
 
 use std::path::PathBuf;
 
 use super::{BeetleCommand, JsonFormatter, OutputFormat, PlainTextFormatter, ResultFormatter};
-use crate::cli::{CliRunResult, Runner};
+use crate::cli::{get_beetle_home, CliRunResult, Runner};
 use crate::server::HttpServer;
 
 pub struct BeetleRunner {
     options: BeetleCommand,
+    catalog: IndexCatalog,
 }
 
 impl BeetleRunner {
-    fn get_beetle_home() -> String {
-        std::env::var("BEETLE_HOME").unwrap_or_else(|_| {
-            let home_dir = std::env::var("HOME")
-                .or_else(|_| std::env::var("USERPROFILE"))
-                .unwrap_or_else(|_| ".".to_string());
-            format!("{}/.beetle", home_dir)
-        })
-    }
-
     fn get_index_path(index_name: &str) -> PathBuf {
-        let beetle_home = Self::get_beetle_home();
+        let beetle_home = get_beetle_home();
         PathBuf::from(beetle_home).join("indexes").join(index_name)
     }
 }
@@ -30,7 +23,10 @@ impl Runner for BeetleRunner {
     type Options = BeetleCommand;
 
     fn new(options: Self::Options) -> Self {
-        Self { options }
+        let storage = FsStorage::new(PathBuf::from(get_beetle_home()));
+        let catalog = IndexCatalog::new(storage);
+
+        Self { options, catalog }
     }
 
     fn run(self) -> CliRunResult {
@@ -38,21 +34,17 @@ impl Runner for BeetleRunner {
             BeetleCommand::New {
                 index_name,
                 path_to_be_indexed,
-            } => {
-                let index_path: PathBuf = BeetleRunner::get_index_path(&index_name);
-
-                match new_index(
-                    &index_name,
-                    &path_to_be_indexed,
-                    &index_path,
-                    IndexingOptions::new(),
-                ) {
-                    Ok(stats) => CliRunResult::PlainTextResult(
-                        PlainTextFormatter.format_indexing_stats(&stats),
-                    ),
-                    Err(e) => CliRunResult::PlainTextResult(format!("Error creating index: {}", e)),
-                }
-            }
+            } => match self
+                .catalog
+                .create(&index_name, &path_to_be_indexed.to_string_lossy())
+            {
+                Ok(_) => CliRunResult::PlainTextResult(format!(
+                    "Index '{}' created successfully at '{}'",
+                    index_name,
+                    BeetleRunner::get_index_path(&index_name).display()
+                )),
+                Err(e) => CliRunResult::PlainTextResult(format!("{}", e)),
+            },
             BeetleCommand::Search {
                 index_name,
                 query,
@@ -83,7 +75,7 @@ impl Runner for BeetleRunner {
                 }
             }
             BeetleCommand::List => {
-                let beetle_home = BeetleRunner::get_beetle_home();
+                let beetle_home = get_beetle_home();
                 let index_path = PathBuf::from(beetle_home).join("indexes");
 
                 let mut index_names = Vec::new();

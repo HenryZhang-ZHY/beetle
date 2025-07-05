@@ -13,9 +13,7 @@ impl IndexCatalog {
     }
 
     pub fn create(&self, index_name: &str, target_path: &str) -> Result<(), String> {
-        self.storage
-            .create(index_name, target_path)
-            .map_err(|e| format!("Failed to create index {}: {}", index_name, e))?;
+        self.storage.create(index_name, target_path)?;
 
         Ok(())
     }

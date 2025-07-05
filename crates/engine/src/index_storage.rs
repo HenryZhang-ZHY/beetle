@@ -39,7 +39,7 @@ pub struct FsStorage {
 }
 
 impl FsStorage {
-    fn new(root: PathBuf) -> Self {
+    pub fn new(root: PathBuf) -> Self {
         FsStorage { root }
     }
 }
@@ -51,18 +51,30 @@ impl IndexStorage for FsStorage {
 
     fn create(&self, index_name: &str, target_path: &str) -> Result<Index, String> {
         let index_root_path = self.root.join(index_name);
-        if index_root_path.exists() {
+        let absolute_index_root_path = self
+            .root
+            .join(index_name)
+            .canonicalize()
+            .unwrap_or_else(|_| PathBuf::from(&index_root_path));
+        if absolute_index_root_path.exists() {
             return Err(format!("Index {} already exists", index_name));
         }
-
-        std::fs::create_dir_all(&index_root_path)
+        std::fs::create_dir_all(&absolute_index_root_path)
             .map_err(|e| format!("Failed to create index directory {}: {}", index_name, e))?;
 
-        let metadata_path = index_root_path.join("metadata.json");
+        let absolute_target_path = PathBuf::from(target_path)
+            .canonicalize()
+            .unwrap_or_else(|_| PathBuf::from(target_path));
+        if !absolute_target_path.exists() {
+            return Err(format!(
+                "Target path '{}' does not exist",
+                absolute_target_path.to_string_lossy()
+            ));
+        }
         let metadata = IndexStorageMetadata {
             index_name: index_name.to_string(),
-            index_dir: index_root_path.to_string_lossy().to_string(),
-            target_path: target_path.to_string(),
+            index_dir: absolute_index_root_path.to_string_lossy().to_string(),
+            target_path: absolute_target_path.to_string_lossy().to_string(),
         };
         let metadata_json = serde_json::to_string(&metadata).map_err(|e| {
             format!(
@@ -70,6 +82,7 @@ impl IndexStorage for FsStorage {
                 index_name, e
             )
         })?;
+        let metadata_path = absolute_index_root_path.join("metadata.json");
         std::fs::write(&metadata_path, metadata_json).map_err(|e| {
             format!(
                 "Failed to write metadata file for index {}: {}",
@@ -77,7 +90,9 @@ impl IndexStorage for FsStorage {
             )
         })?;
 
-        let index_path = index_root_path.join("index");
+        let index_path = absolute_index_root_path.join("index");
+        std::fs::create_dir_all(&index_path)
+            .map_err(|e| format!("Failed to create index directory {}: {}", index_name, e))?;
         Index::create_in_dir(&index_path, CodeIndexSchema::create())
             .map_err(|e| format!("Failed to create index {}: {}", index_name, e))
     }

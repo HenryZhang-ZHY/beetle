@@ -7,7 +7,9 @@ mod schema;
 mod search;
 
 pub use document::Document;
+pub use index_catalog::IndexCatalog;
 pub use index_manager::{IndexInfo, IndexManager, IndexMetadata, IndexingOptions, IndexingStats};
+pub use index_storage::{FsStorage, IndexStorage};
 pub use search::SearchResult;
 
 use anyhow::Result;
