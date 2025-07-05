@@ -63,7 +63,8 @@ beetle search --index myproject --query "main" --format json
 | `search` | Search within an index | ✅ |
 | `list` | List all indexes | ✅ |
 | `remove` | Delete an index | ✅ |
-| `update` | Update an index | 🚧 Planned |
+| `update` | Update an index (incremental/full reindex) | ✅ |
+| `serve` | Start HTTP API server | ✅ |
 
 ### Command Examples
 
@@ -82,13 +83,26 @@ beetle list
 
 # Delete index
 beetle remove --index <NAME>
+
+# Update index (incremental)
+beetle update --index <NAME>
+
+# Update index (full reindex)
+beetle update --index <NAME> --reindex
+
+# Start HTTP API server
+beetle serve --port 3000
 ```
 
 > 📖 **For detailed command documentation and usage examples, see [docs/design.md](docs/design.md)**
 
 ## 🏗️ Architecture & Storage
 
-**Architecture**: beetle uses a layered design with a core engine (`engine`), CLI tool, and VS Code extension.
+**Architecture**: beetle uses a workspace-based architecture with:
+- **Core Engine** (`crates/engine`): Tantivy-based indexing and search engine
+- **CLI Application** (`apps/cli`): Command-line interface with comprehensive functionality
+- **VS Code Extension** (`editors/vscode`): Rich IDE integration with search panels and webviews
+- **Web UI** (`apps/webui`): Vue.js-based web interface for browser-based search
 
 **Storage**: Indexes are stored in `~/.beetle/` by default. Customize with the `BEETLE_HOME` environment variable.
 
@@ -96,8 +110,12 @@ beetle remove --index <NAME>
 ~/.beetle/
 ├── indexes/
 │   ├── project-1/
+│   │   ├── tantivy_index/
+│   │   └── metadata.json
 │   └── project-2/
-└── metadata/
+│       ├── tantivy_index/
+│       └── metadata.json
+└── catalog.json
 ```
 
 **Supported File Types**: 50+ file types including Rust, Python, JavaScript, TypeScript, Go, Java, C/C++, HTML, CSS, JSON, Markdown, and more.
@@ -136,7 +154,7 @@ cargo test --package beetle         # CLI tests only
 
 **Auto-detected File Types**: Programming languages (Rust, Python, JS/TS, Go, Java, C/C++), web files, configs, docs, and more.
 
-**Roadmap**: VS Code extension, incremental updates, advanced query syntax, web UI.
+**Development Status**: Core functionality complete with CLI, VS Code extension, and web UI. HTTP API server ready for integration.
 
 > 📖 **For performance benchmarks and detailed roadmap, see [docs/design.md](docs/design.md)**
 
