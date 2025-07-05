@@ -1,3 +1,4 @@
+use crate::file_scanner::FileIndexMetadata;
 use crate::schema::CodeIndexSchema;
 use std::path::PathBuf;
 use tantivy::tokenizer::NgramTokenizer;
@@ -33,6 +34,12 @@ pub trait IndexStorage {
 
         Ok(())
     }
+    fn read_file_index_metadata(&self, index_name: &str) -> Result<Vec<FileIndexMetadata>, String>;
+    fn save_file_index_metadata(
+        &self,
+        index_name: &str,
+        metadata: Vec<FileIndexMetadata>,
+    ) -> Result<(), String>;
 }
 
 pub struct FsStorage {
@@ -44,7 +51,15 @@ impl FsStorage {
         FsStorage { root }
     }
 
-    pub const META_JSON: &'static str = "meta.json";
+    fn get_file_index_path(&self, index_name: &str) -> Result<PathBuf, String> {
+        let index_metadata = self.get_metadata(index_name)?;
+        let file_index_path = PathBuf::from(&index_metadata.index_dir).join(Self::INDEX_FILE_NAME);
+
+        Ok(file_index_path)
+    }
+
+    pub const META_JSON_FILE_NAME: &'static str = "meta.json";
+    pub const INDEX_FILE_NAME: &'static str = "index";
 }
 
 impl IndexStorage for FsStorage {
@@ -85,7 +100,7 @@ impl IndexStorage for FsStorage {
                 index_name, e
             )
         })?;
-        let metadata_path = absolute_index_root_path.join(Self::META_JSON);
+        let metadata_path = absolute_index_root_path.join(Self::META_JSON_FILE_NAME);
         std::fs::write(&metadata_path, metadata_json).map_err(|e| {
             format!(
                 "Failed to write metadata file for index {}: {}",
@@ -145,7 +160,7 @@ impl IndexStorage for FsStorage {
                 continue;
             }
 
-            let index_metadata_path = entry.path().join(Self::META_JSON);
+            let index_metadata_path = entry.path().join(Self::META_JSON_FILE_NAME);
             if !index_metadata_path.exists() {
                 return Err(format!(
                     "Metadata file does not exist for index {}",
@@ -164,5 +179,46 @@ impl IndexStorage for FsStorage {
         indices.sort_by(|a, b| a.index_name.cmp(&b.index_name));
 
         Ok(indices)
+    }
+
+    fn save_file_index_metadata(
+        &self,
+        index_name: &str,
+        metadata: Vec<FileIndexMetadata>,
+    ) -> Result<(), String> {
+        let file_index_path = self.get_file_index_path(index_name)?;
+        let file_index_meta_json = serde_json::to_string(&metadata).map_err(|e| {
+            format!(
+                "Failed to serialize file index metadata for index {}: {}",
+                index_name, e
+            )
+        })?;
+        std::fs::write(&file_index_path, file_index_meta_json)
+            .map_err(|e| format!("Failed to write file index metadata: {}", e))?;
+
+        Ok(())
+    }
+
+    fn read_file_index_metadata(&self, index_name: &str) -> Result<Vec<FileIndexMetadata>, String> {
+        let file_index_path = self.get_file_index_path(index_name)?;
+        if !file_index_path.exists() {
+            return Ok(Vec::new());
+        }
+
+        let file_index_meta_json = std::fs::read_to_string(&file_index_path).map_err(|e| {
+            format!(
+                "Failed to read file index metadata for index {}: {}",
+                index_name, e
+            )
+        })?;
+        let metadata: Vec<FileIndexMetadata> = serde_json::from_str(&file_index_meta_json)
+            .map_err(|e| {
+                format!(
+                    "Failed to parse file index metadata JSON for index {}: {}",
+                    index_name, e
+                )
+            })?;
+
+        Ok(metadata)
     }
 }

@@ -1,3 +1,4 @@
+use crate::file_scanner::{self, FileScanner};
 use crate::index_storage::{IndexStorage, IndexStorageMetadata};
 use crate::schema::{CodeIndexDocument, CodeIndexSchema};
 use tantivy::Index;
@@ -51,6 +52,9 @@ impl<'a> IndexWriter<'a> {
                 self.index_metadata.index_name, e
             )
         })?;
+
+        let file_scanner = FileScanner {};
+        let files = file_scanner.scan(&self.index_metadata.target_path);
 
         Ok(())
     }

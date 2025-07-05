@@ -1,4 +1,5 @@
 mod document;
+mod file_scanner;
 mod index_catalog;
 mod index_manager;
 mod index_storage;
