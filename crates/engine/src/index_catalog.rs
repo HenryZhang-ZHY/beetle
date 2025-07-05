@@ -48,4 +48,10 @@ impl IndexCatalog {
     pub fn list(&self) -> Result<Vec<IndexStorageMetadata>, String> {
         self.storage.list()
     }
+
+    pub fn reset(&self, index_name: &str) -> Result<(), String> {
+        self.storage.reset(index_name)?;
+
+        Ok(())
+    }
 }

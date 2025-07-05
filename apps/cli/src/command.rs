@@ -57,8 +57,6 @@ pub enum BeetleCommand {
     Update {
         /// Name of the index to update
         index_name: String,
-        /// Whether to perform incremental update
-        incremental: bool,
         /// Whether to perform full reindex
         reindex: bool,
     },
@@ -214,11 +212,9 @@ mod tests {
         match result.unwrap() {
             BeetleCommand::Update {
                 index_name,
-                incremental,
                 reindex,
             } => {
                 assert_eq!(index_name, "my-index");
-                assert!(incremental);
                 assert!(!reindex);
             }
             _ => panic!("Expected Update command"),
@@ -232,11 +228,9 @@ mod tests {
         match result.unwrap() {
             BeetleCommand::Update {
                 index_name,
-                incremental,
                 reindex,
             } => {
                 assert_eq!(index_name, "my-index");
-                assert!(!incremental);
                 assert!(reindex);
             }
             _ => panic!("Expected Update command"),
@@ -254,12 +248,7 @@ mod tests {
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::Update {
-                incremental,
-                reindex,
-                ..
-            } => {
-                assert!(incremental);
+            BeetleCommand::Update { reindex, .. } => {
                 assert!(reindex);
             }
             _ => panic!("Expected Update command"),

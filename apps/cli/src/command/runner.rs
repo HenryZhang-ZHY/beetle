@@ -102,36 +102,23 @@ impl Runner for BeetleRunner {
             },
             BeetleCommand::Update {
                 index_name,
-                incremental,
                 reindex,
             } => {
-                if incremental {
-                    if let Ok(mut writer) = self.catalog.get_writer(&index_name) {
-                        match writer.index() {
-                            Ok(_) => CliRunResult::PlainTextResult(format!(
-                                "Incremental update for '{}' successful",
-                                index_name
-                            )),
-                            Err(e) => CliRunResult::PlainTextResult(format!(
-                                "Failed to index data for '{}': {}",
-                                index_name, e
-                            )),
-                        }
-                    } else {
-                        CliRunResult::PlainTextResult(format!(
-                            "Index '{}' not found for incremental update",
-                            index_name
-                        ))
-                    }
-                } else if reindex {
-                    CliRunResult::PlainTextResult(format!(
-                        "Reindexing '{}' is not yet implemented",
+                let mut writer = self.catalog.get_writer(&index_name).unwrap();
+
+                if reindex {
+                    self.catalog.reset(&index_name).unwrap();
+                }
+
+                match writer.index() {
+                    Ok(_) => CliRunResult::PlainTextResult(format!(
+                        "Incremental update for '{}' successful",
                         index_name
-                    ))
-                } else {
-                    CliRunResult::PlainTextResult(
-                        "Please specify either --incremental or --reindex for update".to_string(),
-                    )
+                    )),
+                    Err(e) => CliRunResult::PlainTextResult(format!(
+                        "Failed to index data for '{}': {}",
+                        index_name, e
+                    )),
                 }
             }
             BeetleCommand::Serve { port } => HttpServer::start(port),

@@ -24,7 +24,7 @@ pub struct FileIndexMetadata {
 pub struct IndexDiffer;
 
 impl IndexDiffer {
-    pub fn diff(snapshot: &[FileIndexMetadata], manifest: &[FileIndexMetadata]) -> Delta {
+    pub fn diff(&self, snapshot: &[FileIndexMetadata], manifest: &[FileIndexMetadata]) -> Delta {
         let mut added = Vec::new();
         let mut modified = Vec::new();
         let mut removed = Vec::new();
@@ -154,7 +154,7 @@ mod tests {
                 },
             ];
 
-            let delta = IndexDiffer::diff(&snapshot, &manifest);
+            let delta = IndexDiffer {}.diff(&snapshot, &manifest);
 
             assert_eq!(delta.modified.len(), 0);
             assert_eq!(delta.removed.len(), 0);
@@ -178,7 +178,7 @@ mod tests {
                 modified_time: 1622547900,
             }];
 
-            let delta = IndexDiffer::diff(&snapshot, &manifest);
+            let delta = IndexDiffer {}.diff(&snapshot, &manifest);
 
             assert_eq!(delta.added.len(), 0);
             assert_eq!(delta.removed.len(), 0);
@@ -199,7 +199,7 @@ mod tests {
 
             let manifest = vec![];
 
-            let delta = IndexDiffer::diff(&snapshot, &manifest);
+            let delta = IndexDiffer {}.diff(&snapshot, &manifest);
 
             assert_eq!(delta.added.len(), 0);
             assert_eq!(delta.modified.len(), 0);

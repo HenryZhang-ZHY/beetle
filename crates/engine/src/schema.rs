@@ -43,14 +43,19 @@ pub struct CodeIndexDocument {
 }
 
 impl CodeIndexDocument {
-    pub fn new(
-        path: String,
-        content: String,
-        extension: String,
-        last_modified: SystemTime,
-    ) -> Self {
+    pub fn from_path(path: &String) -> Self {
+        let content = std::fs::read_to_string(&path).unwrap_or_default();
+        let extension = std::path::PathBuf::from(&path)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or_default()
+            .to_string();
+        let last_modified = std::fs::metadata(&path)
+            .and_then(|meta| meta.modified())
+            .unwrap_or(SystemTime::now());
+
         CodeIndexDocument {
-            path,
+            path: path.clone(),
             content,
             extension,
             last_modified,
@@ -72,7 +77,6 @@ impl CodeIndexDocument {
             &self.extension,
         );
 
-        // convert SystemTime to tantivy DateTime
         let last_modified = self
             .last_modified
             .duration_since(SystemTime::UNIX_EPOCH)

@@ -1,4 +1,4 @@
-use crate::file_scanner::{self, FileScanner};
+use crate::file_scanner::{FileScanner, IndexDiffer};
 use crate::index_storage::{IndexStorage, IndexStorageMetadata};
 use crate::schema::{CodeIndexDocument, CodeIndexSchema};
 use tantivy::Index;
@@ -30,21 +30,39 @@ impl<'a> IndexWriter<'a> {
     }
 
     pub fn index(&mut self) -> Result<(), String> {
-        let document = CodeIndexDocument::new(
-            "example/path/to/file.rs".to_string(),
-            "fn main() { println!(\"Hello, world!\"); }".to_string(),
-            "rs".to_string(),
-            std::time::SystemTime::now(),
-        );
+        let file_index_snapshot = self
+            .storage
+            .read_file_index_metadata(&self.index_metadata.index_name)?;
 
-        let tantivy_doc = document.to_tantivy_document(&CodeIndexSchema::create());
+        let file_scanner = FileScanner {};
+        let manifest = file_scanner.scan(&self.index_metadata.target_path);
 
-        self.writer.add_document(tantivy_doc).map_err(|e| {
-            format!(
-                "Failed to add document to index {}: {}",
-                self.index_metadata.index_name, e
-            )
-        })?;
+        let index_differr = IndexDiffer {};
+        let delta = index_differr.diff(&file_index_snapshot, &manifest);
+
+        let schema = CodeIndexSchema::create();
+        let path_field = schema
+            .get_field(CodeIndexSchema::PATH_FIELD)
+            .map_err(|e| format!("Failed to get path field: {}", e))?;
+
+        let removed = delta.removed;
+        for file in removed {
+            let file_path = file.path.clone();
+            self.writer
+                .delete_term(tantivy::Term::from_field_text(path_field, &file_path));
+        }
+
+        let files_to_update = delta.added.into_iter().chain(delta.modified);
+        for file in files_to_update {
+            let document = CodeIndexDocument::from_path(&file.path);
+            let tantivy_doc = document.to_tantivy_document(&schema);
+            self.writer.add_document(tantivy_doc).map_err(|e| {
+                format!(
+                    "Failed to add document to index {}: {}",
+                    self.index_metadata.index_name, e
+                )
+            })?;
+        }
 
         self.writer.commit().map_err(|e| {
             format!(
@@ -53,8 +71,8 @@ impl<'a> IndexWriter<'a> {
             )
         })?;
 
-        let file_scanner = FileScanner {};
-        let files = file_scanner.scan(&self.index_metadata.target_path);
+        self.storage
+            .save_file_index_metadata(&self.index_metadata.index_name, manifest)?;
 
         Ok(())
     }

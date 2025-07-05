@@ -53,13 +53,14 @@ impl FsStorage {
 
     fn get_file_index_path(&self, index_name: &str) -> Result<PathBuf, String> {
         let index_metadata = self.get_metadata(index_name)?;
-        let file_index_path = PathBuf::from(&index_metadata.index_dir).join(Self::INDEX_FILE_NAME);
+        let file_index_path =
+            PathBuf::from(&index_metadata.index_dir).join(Self::FILE_INDEX_SNAPSHOT_JSON_FILE_NAME);
 
         Ok(file_index_path)
     }
 
     pub const META_JSON_FILE_NAME: &'static str = "meta.json";
-    pub const INDEX_FILE_NAME: &'static str = "index";
+    pub const FILE_INDEX_SNAPSHOT_JSON_FILE_NAME: &'static str = "file_index_snapshot.json";
 }
 
 impl IndexStorage for FsStorage {
