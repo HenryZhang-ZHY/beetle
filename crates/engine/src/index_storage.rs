@@ -42,6 +42,8 @@ impl FsStorage {
     pub fn new(root: PathBuf) -> Self {
         FsStorage { root }
     }
+
+    pub const META_JSON: &'static str = "meta.json";
 }
 
 impl IndexStorage for FsStorage {
@@ -82,7 +84,7 @@ impl IndexStorage for FsStorage {
                 index_name, e
             )
         })?;
-        let metadata_path = absolute_index_root_path.join("metadata.json");
+        let metadata_path = absolute_index_root_path.join(Self::META_JSON);
         std::fs::write(&metadata_path, metadata_json).map_err(|e| {
             format!(
                 "Failed to write metadata file for index {}: {}",
@@ -132,7 +134,7 @@ impl IndexStorage for FsStorage {
                 continue;
             }
 
-            let index_metadata_path = entry.path().join("metadata.json");
+            let index_metadata_path = entry.path().join(Self::META_JSON);
             if !index_metadata_path.exists() {
                 return Err(format!(
                     "Metadata file does not exist for index {}",

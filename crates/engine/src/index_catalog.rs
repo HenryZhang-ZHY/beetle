@@ -40,9 +40,7 @@ impl IndexCatalog {
     }
 
     pub fn remove(&self, index_name: &str) -> Result<(), String> {
-        self.storage
-            .remove(index_name)
-            .map_err(|e| format!("Failed to remove index {}: {}", index_name, e))?;
+        self.storage.remove(index_name)?;
 
         Ok(())
     }

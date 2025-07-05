@@ -97,25 +97,13 @@ impl Runner for BeetleRunner {
                 }
             }
 
-            BeetleCommand::Delete { index_name } => {
-                let index_path: PathBuf = BeetleRunner::get_index_path(&index_name);
-
-                if index_path.exists() {
-                    if std::fs::remove_dir_all(&index_path).is_ok() {
-                        CliRunResult::PlainTextResult(format!(
-                            "Index '{}' deleted successfully",
-                            index_name
-                        ))
-                    } else {
-                        CliRunResult::PlainTextResult(format!(
-                            "Failed to delete index '{}'. Please check permissions.",
-                            index_name
-                        ))
-                    }
-                } else {
-                    CliRunResult::PlainTextResult(format!("Index '{}' does not exist", index_name))
-                }
-            }
+            BeetleCommand::Delete { index_name } => match self.catalog.remove(&index_name) {
+                Ok(_) => CliRunResult::PlainTextResult(format!(
+                    "Index '{}' deleted successfully",
+                    index_name
+                )),
+                Err(e) => CliRunResult::PlainTextResult(format!("{}", e)),
+            },
             BeetleCommand::Update {
                 index_name,
                 incremental,
