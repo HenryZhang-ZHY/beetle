@@ -35,14 +35,14 @@ impl Runner for BeetleRunner {
                     "Index '{}' created successfully",
                     index_name
                 )),
-                Err(e) => CliRunResult::PlainTextResult(format!("{}", e)),
+                Err(e) => CliRunResult::PlainTextResult(e.to_string()),
             },
             BeetleCommand::Search {
                 index_name,
                 query,
                 formatter,
             } => {
-                let mut searcher = self.catalog.get_searcher(&index_name).unwrap();
+                let searcher = self.catalog.get_searcher(&index_name).unwrap();
                 let search_result = searcher.search(&query).unwrap();
                 match formatter {
                     OutputFormat::Text => {
@@ -87,7 +87,7 @@ impl Runner for BeetleRunner {
                     "Index '{}' removed successfully",
                     index_name
                 )),
-                Err(e) => CliRunResult::PlainTextResult(format!("{}", e)),
+                Err(e) => CliRunResult::PlainTextResult(e.to_string()),
             },
             BeetleCommand::Update {
                 index_name,
@@ -110,7 +110,7 @@ impl Runner for BeetleRunner {
                     )),
                 }
             }
-            BeetleCommand::Serve { port } => CliRunResult::None,
+            BeetleCommand::Serve { port: _ } => CliRunResult::None,
         }
     }
 }

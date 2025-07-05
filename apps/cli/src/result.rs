@@ -1,6 +1,7 @@
 use std::process::{ExitCode, Termination};
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum CliRunResult {
     None,
     PlainTextResult(String),

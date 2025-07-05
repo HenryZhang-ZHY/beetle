@@ -1,6 +1,5 @@
 mod json;
 mod text;
-mod utils;
 
 pub use json::JsonFormatter;
 pub use text::PlainTextFormatter;

@@ -1,4 +1,3 @@
-use crate::index_storage::{IndexStorage, IndexStorageMetadata};
 use crate::schema::CodeIndexSchema;
 use tantivy::schema::Value;
 use tantivy::snippet::SnippetGenerator;
@@ -14,32 +13,18 @@ pub struct SearchResultItem {
 
 impl SearchResultItem {}
 
-pub struct IndexSearcher<'a> {
-    storage: &'a dyn IndexStorage,
-    index_metadata: IndexStorageMetadata,
+pub struct IndexSearcher {
     index: Index,
     reader: tantivy::IndexReader,
 }
 
-impl<'a> IndexSearcher<'a> {
-    pub fn new(
-        storage: &'a dyn IndexStorage,
-        index_metadata: IndexStorageMetadata,
-        index: Index,
-    ) -> Result<Self, String> {
-        let reader = index.reader().map_err(|e| {
-            format!(
-                "Failed to create index reader for index {}: {}",
-                index_metadata.index_name, e
-            )
-        })?;
+impl IndexSearcher {
+    pub fn new(index: Index) -> Result<Self, String> {
+        let reader = index
+            .reader()
+            .map_err(|e| format!("Failed to create index reader for index: {}", e))?;
 
-        Ok(IndexSearcher {
-            storage,
-            index_metadata,
-            index: index,
-            reader,
-        })
+        Ok(IndexSearcher { index, reader })
     }
 
     pub fn search(&self, query: &str) -> Result<Vec<SearchResultItem>, String> {
@@ -66,7 +51,7 @@ impl<'a> IndexSearcher<'a> {
             .map_err(|e| format!("Search failed: {}", e))?;
 
         let snippet_generator =
-            SnippetGenerator::create(&searcher, &*&parsed_query, content_field).unwrap();
+            SnippetGenerator::create(&searcher, &parsed_query, content_field).unwrap();
 
         let mut results = Vec::new();
         for (_score, doc_address) in top_docs {

@@ -1,6 +1,6 @@
 use crate::file_status_index::{diff_file_index_metadata, FileScanner};
-use crate::index_storage::{IndexStorage, IndexStorageMetadata};
 use crate::schema::{CodeIndexDocument, CodeIndexSchema};
+use crate::storage::{IndexStorage, IndexStorageMetadata};
 use tantivy::Index;
 
 pub struct IndexWriter<'a> {
