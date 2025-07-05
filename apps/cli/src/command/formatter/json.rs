@@ -1,23 +1,5 @@
-use super::ResultFormatter;
-use engine::search::SearchResultItem;
+use super::*;
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize)]
-struct SearchOutput {
-    query: String,
-    count: usize,
-    results: Vec<SearchResultJson>,
-}
-
-#[derive(Serialize, Deserialize)]
-struct SearchResultJson {
-    path: String,
-    score: f32,
-    snippet: String,
-}
-
-/// JSON formatter
 pub struct JsonFormatter {
     pretty: bool,
 }
@@ -29,24 +11,34 @@ impl JsonFormatter {
 }
 
 impl ResultFormatter for JsonFormatter {
-    fn format_search_results(&self, query: &str, results: &[SearchResultItem]) -> String {
-        let output = SearchOutput {
-            query: query.to_string(),
-            count: results.len(),
-            results: results
-                .iter()
-                .map(|r| SearchResultJson {
-                    path: r.path.clone(),
-                    score: r.score,
-                    snippet: r.snippet.clone(),
+    fn format(&self, output: super::CommandOutput) -> String {
+        let json_value = match output {
+            CommandOutput::Success(sucess_message) => {
+                serde_json::json!({
+                    "status": "success",
+                    "message": sucess_message
                 })
-                .collect(),
+            }
+            CommandOutput::Error(error_message) => {
+                serde_json::json!({
+                    "status": "error",
+                    "message": error_message
+                })
+            }
+            CommandOutput::List(indexes) => serde_json::json!({
+                "status": "success",
+                "payload": indexes
+            }),
+            CommandOutput::Search(results) => serde_json::json!({
+                "status": "success",
+                "payload": results
+            }),
         };
 
         if self.pretty {
-            serde_json::to_string_pretty(&output).unwrap_or("".to_string())
+            serde_json::to_string_pretty(&json_value).unwrap()
         } else {
-            serde_json::to_string(&output).unwrap_or("".to_string())
+            serde_json::to_string(&json_value).unwrap()
         }
     }
 }

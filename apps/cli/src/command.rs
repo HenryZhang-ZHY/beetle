@@ -12,7 +12,7 @@ pub use runner::BeetleRunner;
 
 pub use formatter::{JsonFormatter, PlainTextFormatter, ResultFormatter};
 
-pub use option::index_name;
+pub use option::{format, index_name};
 
 use bpaf::*;
 use std::path::PathBuf;
@@ -35,34 +35,27 @@ pub enum OutputFormat {
 
 #[derive(Debug, Clone)]
 pub enum BeetleCommand {
-    /// Create a new search index from a repository
     New {
         index_name: String,
-        /// Path to the repository folder to be indexed
+
         path_to_be_indexed: PathBuf,
     },
-    /// Query an existing index
     Search {
         index_name: String,
         query: String,
-        formatter: OutputFormat,
+        format: OutputFormat,
     },
-    List,
-    /// Delete an existing index
+    List {
+        format: OutputFormat,
+    },
     Remove {
-        /// Name of the index to remove
         index_name: String,
     },
-    /// Update an existing index
     Update {
-        /// Name of the index to update
         index_name: String,
-        /// Whether to perform full reindex
         reindex: bool,
     },
-    /// Start HTTP server
     Serve {
-        /// Port to bind the server to
         port: u16,
     },
 }
@@ -141,7 +134,7 @@ mod tests {
             BeetleCommand::Search {
                 index_name,
                 query,
-                formatter,
+                format: formatter,
             } => {
                 assert_eq!(index_name, "my-index");
                 assert_eq!(query, "main function");
@@ -158,7 +151,9 @@ mod tests {
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::Search { formatter, .. } => {
+            BeetleCommand::Search {
+                format: formatter, ..
+            } => {
                 matches!(formatter, OutputFormat::Json);
             }
             _ => panic!("Expected Query command"),

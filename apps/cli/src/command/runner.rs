@@ -4,12 +4,74 @@ use engine::IndexCatalog;
 use std::path::PathBuf;
 
 use super::{BeetleCommand, JsonFormatter, OutputFormat, PlainTextFormatter, ResultFormatter};
-use crate::cli::{get_beetle_home, CliRunResult, Runner};
-// use crate::server::HttpServer;
+use crate::{
+    cli::{get_beetle_home, CliRunResult, Runner},
+    command::formatter::CommandOutput,
+};
 
 pub struct BeetleRunner {
     options: BeetleCommand,
     catalog: IndexCatalog,
+}
+
+impl BeetleRunner {
+    fn execute(self) -> Result<CommandOutput, String> {
+        match self.options {
+            BeetleCommand::New {
+                index_name,
+                path_to_be_indexed,
+            } => {
+                self.catalog
+                    .create(&index_name, &path_to_be_indexed.to_string_lossy())?;
+
+                Ok(CommandOutput::Success(format!(
+                    "Index '{}' created successfully",
+                    index_name
+                )))
+            }
+            BeetleCommand::Search {
+                index_name, query, ..
+            } => {
+                let searcher = self.catalog.get_searcher(&index_name)?;
+                let search_result = searcher.search(&query)?;
+
+                Ok(CommandOutput::Search(search_result))
+            }
+            BeetleCommand::List { .. } => {
+                let indexes = self.catalog.list()?;
+
+                Ok(CommandOutput::List(indexes))
+            }
+            BeetleCommand::Remove { index_name } => {
+                self.catalog.remove(&index_name)?;
+
+                Ok(CommandOutput::Success(format!(
+                    "Index '{}' removed successfully",
+                    index_name
+                )))
+            }
+            BeetleCommand::Update {
+                index_name,
+                reindex,
+            } => {
+                let mut writer = self.catalog.get_writer(&index_name)?;
+
+                if reindex {
+                    self.catalog.reset(&index_name)?;
+                }
+
+                writer.index()?;
+
+                Ok(CommandOutput::Success(format!(
+                    "Incremental update for '{}' successful",
+                    index_name
+                )))
+            }
+            BeetleCommand::Serve { port: _ } => {
+                Ok(CommandOutput::Error("Serve Not Implemented".to_string()))
+            }
+        }
+    }
 }
 
 impl Runner for BeetleRunner {
@@ -23,94 +85,21 @@ impl Runner for BeetleRunner {
     }
 
     fn run(self) -> CliRunResult {
-        match self.options {
-            BeetleCommand::New {
-                index_name,
-                path_to_be_indexed,
-            } => match self
-                .catalog
-                .create(&index_name, &path_to_be_indexed.to_string_lossy())
-            {
-                Ok(_) => CliRunResult::PlainTextResult(format!(
-                    "Index '{}' created successfully",
-                    index_name
-                )),
-                Err(e) => CliRunResult::PlainTextResult(e.to_string()),
-            },
-            BeetleCommand::Search {
-                index_name,
-                query,
-                formatter,
-            } => {
-                let searcher = self.catalog.get_searcher(&index_name).unwrap();
-                let search_result = searcher.search(&query).unwrap();
-                match formatter {
-                    OutputFormat::Text => {
-                        let text_formatter = PlainTextFormatter;
+        let output_format = match &self.options {
+            BeetleCommand::Search { format, .. } => format.clone(),
+            BeetleCommand::List { format } => format.clone(),
+            _ => OutputFormat::Text,
+        };
 
-                        CliRunResult::PlainTextResult(
-                            text_formatter.format_search_results(&query, &search_result),
-                        )
-                    }
-                    OutputFormat::Json => {
-                        let json_formatter = JsonFormatter::new(true);
-
-                        CliRunResult::PlainTextResult(
-                            json_formatter.format_search_results(&query, &search_result),
-                        )
-                    }
-                }
+        match self.execute() {
+            Ok(output) => {
+                let formatted_string = match output_format {
+                    OutputFormat::Json => JsonFormatter::new(true).format(output),
+                    OutputFormat::Text => PlainTextFormatter.format(output),
+                };
+                CliRunResult::Success(formatted_string)
             }
-            BeetleCommand::List => match self.catalog.list() {
-                Ok(indexes) => {
-                    if indexes.is_empty() {
-                        return CliRunResult::PlainTextResult("No indexes found".to_string());
-                    }
-
-                    let plain_text_result = indexes
-                        .iter()
-                        .map(|metadata| {
-                            format!(
-                                "Index Name: {}, Target Path: {}",
-                                metadata.index_name, metadata.target_path
-                            )
-                        })
-                        .collect::<Vec<_>>()
-                        .join("\n");
-                    CliRunResult::PlainTextResult(plain_text_result)
-                }
-                Err(e) => CliRunResult::PlainTextResult(format!("Error listing indexes: {}", e)),
-            },
-
-            BeetleCommand::Remove { index_name } => match self.catalog.remove(&index_name) {
-                Ok(_) => CliRunResult::PlainTextResult(format!(
-                    "Index '{}' removed successfully",
-                    index_name
-                )),
-                Err(e) => CliRunResult::PlainTextResult(e.to_string()),
-            },
-            BeetleCommand::Update {
-                index_name,
-                reindex,
-            } => {
-                let mut writer = self.catalog.get_writer(&index_name).unwrap();
-
-                if reindex {
-                    self.catalog.reset(&index_name).unwrap();
-                }
-
-                match writer.index() {
-                    Ok(_) => CliRunResult::PlainTextResult(format!(
-                        "Incremental update for '{}' successful",
-                        index_name
-                    )),
-                    Err(e) => CliRunResult::PlainTextResult(format!(
-                        "Failed to index data for '{}': {}",
-                        index_name, e
-                    )),
-                }
-            }
-            BeetleCommand::Serve { port: _ } => CliRunResult::None,
+            Err(message) => CliRunResult::Error(message),
         }
     }
 }

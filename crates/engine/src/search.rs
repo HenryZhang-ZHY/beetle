@@ -4,6 +4,7 @@ use tantivy::snippet::SnippetGenerator;
 
 use tantivy::{Index, TantivyDocument};
 
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct SearchResultItem {
     pub path: String,
     pub snippet: String,

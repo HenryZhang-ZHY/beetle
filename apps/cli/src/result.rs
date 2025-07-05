@@ -4,16 +4,21 @@ use std::process::{ExitCode, Termination};
 #[allow(dead_code)]
 pub enum CliRunResult {
     None,
-    PlainTextResult(String),
+    Success(String),
+    Error(String),
 }
 
 impl Termination for CliRunResult {
     fn report(self) -> ExitCode {
         match self {
             Self::None => ExitCode::SUCCESS,
-            Self::PlainTextResult(text) => {
+            Self::Success(text) => {
                 println!("{}", text);
                 ExitCode::SUCCESS
+            }
+            Self::Error(err_text) => {
+                eprintln!("Error: {}", err_text);
+                ExitCode::FAILURE
             }
         }
     }
