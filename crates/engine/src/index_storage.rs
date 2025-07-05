@@ -1,5 +1,6 @@
 use crate::schema::CodeIndexSchema;
 use std::path::PathBuf;
+use tantivy::tokenizer::NgramTokenizer;
 use tantivy::Index;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -95,8 +96,13 @@ impl IndexStorage for FsStorage {
         let index_path = absolute_index_root_path.join("index");
         std::fs::create_dir_all(&index_path)
             .map_err(|e| format!("Failed to create index directory {}: {}", index_name, e))?;
-        Index::create_in_dir(&index_path, CodeIndexSchema::create())
-            .map_err(|e| format!("Failed to create index {}: {}", index_name, e))
+        let index = Index::create_in_dir(&index_path, CodeIndexSchema::create())
+            .map_err(|e| format!("Failed to create index {}: {}", index_name, e))?;
+        index
+            .tokenizers()
+            .register("ngram3", NgramTokenizer::new(3, 3, false).unwrap());
+
+        Ok(index)
     }
 
     fn open(&self, index_name: &str) -> Result<Index, String> {
@@ -105,8 +111,13 @@ impl IndexStorage for FsStorage {
             return Err(format!("Index {} does not exist", index_name));
         }
 
-        Index::open_in_dir(&index_path)
-            .map_err(|e| format!("Failed to open index {}: {}", index_name, e))
+        let index = Index::open_in_dir(&index_path)
+            .map_err(|e| format!("Failed to open index {}: {}", index_name, e))?;
+        index
+            .tokenizers()
+            .register("ngram3", NgramTokenizer::new(3, 3, false).unwrap());
+
+        Ok(index)
     }
 
     fn remove(&self, index_name: &str) -> Result<(), String> {

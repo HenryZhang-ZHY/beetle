@@ -107,12 +107,24 @@ impl Runner for BeetleRunner {
                 incremental,
                 reindex,
             } => {
-                // TODO: Implement update_index in engine
                 if incremental {
-                    CliRunResult::PlainTextResult(format!(
-                        "Incremental update of index '{}' is not yet implemented",
-                        index_name
-                    ))
+                    if let Ok(mut writer) = self.catalog.get_writer(&index_name) {
+                        match writer.index() {
+                            Ok(_) => CliRunResult::PlainTextResult(format!(
+                                "Incremental update for '{}' successful",
+                                index_name
+                            )),
+                            Err(e) => CliRunResult::PlainTextResult(format!(
+                                "Failed to index data for '{}': {}",
+                                index_name, e
+                            )),
+                        }
+                    } else {
+                        CliRunResult::PlainTextResult(format!(
+                            "Index '{}' not found for incremental update",
+                            index_name
+                        ))
+                    }
                 } else if reindex {
                     CliRunResult::PlainTextResult(format!(
                         "Reindexing '{}' is not yet implemented",
