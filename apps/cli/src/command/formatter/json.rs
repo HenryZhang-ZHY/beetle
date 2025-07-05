@@ -1,5 +1,5 @@
 use super::ResultFormatter;
-use engine::SearchResultItem;
+use engine::search::SearchResultItem;
 
 use serde::{Deserialize, Serialize};
 

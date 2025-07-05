@@ -1,12 +1,16 @@
-mod document;
-mod file_scanner;
+mod file_status_index;
 mod index_catalog;
 mod index_searcher;
 mod index_storage;
 mod index_writter;
 mod schema;
 
-pub use document::Document;
 pub use index_catalog::IndexCatalog;
-pub use index_searcher::{IndexSearcher, SearchResultItem};
-pub use index_storage::{FsStorage, IndexStorage};
+
+pub mod search {
+    pub use crate::index_searcher::{IndexSearcher, SearchResultItem};
+}
+
+pub mod storage {
+    pub use crate::index_storage::{FsStorage, IndexStorage};
+}

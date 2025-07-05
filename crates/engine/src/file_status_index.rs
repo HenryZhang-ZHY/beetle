@@ -2,18 +2,6 @@ use ignore::WalkBuilder;
 use std::fs;
 use std::sync::{Arc, Mutex};
 
-/*
-
-git use index to speed up `git status` and `git diff`
-We implement a similar index for Beetle, which is a file scanner that scans files and generates an index.
-The index is a list of files and their metadata, such as file size, modification time,
-and file type.
-The index is stored in a file, and the file is updated when files are added, modified, or deleted.
-The index is used to speed up the file scanning process, and to provide a
-quick way to check if a file has been modified since the last scan.
-
-*/
-
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct FileIndexMetadata {
     pub path: String,
@@ -21,41 +9,39 @@ pub struct FileIndexMetadata {
     pub modified_time: u64,
 }
 
-pub struct IndexDiffer;
+pub fn diff_file_index_metadata(
+    previous: &[FileIndexMetadata],
+    current: &[FileIndexMetadata],
+) -> Delta {
+    let mut added = Vec::new();
+    let mut modified = Vec::new();
+    let mut removed = Vec::new();
 
-impl IndexDiffer {
-    pub fn diff(&self, snapshot: &[FileIndexMetadata], manifest: &[FileIndexMetadata]) -> Delta {
-        let mut added = Vec::new();
-        let mut modified = Vec::new();
-        let mut removed = Vec::new();
+    let previous_set: std::collections::HashSet<_> = previous.iter().map(|f| &f.path).collect();
 
-        let previous_set: std::collections::HashSet<_> = snapshot.iter().map(|f| &f.path).collect();
-
-        for file in manifest {
-            if !previous_set.contains(&file.path) {
-                added.push(file.clone());
-            } else {
-                // Check if the file has been modified
-                if let Some(prev_file) = snapshot.iter().find(|f| f.path == file.path) {
-                    if file.size != prev_file.size || file.modified_time != prev_file.modified_time
-                    {
-                        modified.push(file.clone());
-                    }
+    for file in current {
+        if !previous_set.contains(&file.path) {
+            added.push(file.clone());
+        } else {
+            // Check if the file has been modified
+            if let Some(prev_file) = previous.iter().find(|f| f.path == file.path) {
+                if file.size != prev_file.size || file.modified_time != prev_file.modified_time {
+                    modified.push(file.clone());
                 }
             }
         }
+    }
 
-        for file in snapshot {
-            if !manifest.iter().any(|f| f.path == file.path) {
-                removed.push(file.clone());
-            }
+    for file in previous {
+        if !current.iter().any(|f| f.path == file.path) {
+            removed.push(file.clone());
         }
+    }
 
-        Delta {
-            added,
-            modified,
-            removed,
-        }
+    Delta {
+        added,
+        modified,
+        removed,
     }
 }
 
@@ -154,7 +140,7 @@ mod tests {
                 },
             ];
 
-            let delta = IndexDiffer {}.diff(&snapshot, &manifest);
+            let delta = diff_file_index_metadata(&snapshot, &manifest);
 
             assert_eq!(delta.modified.len(), 0);
             assert_eq!(delta.removed.len(), 0);
@@ -178,7 +164,7 @@ mod tests {
                 modified_time: 1622547900,
             }];
 
-            let delta = IndexDiffer {}.diff(&snapshot, &manifest);
+            let delta = diff_file_index_metadata(&snapshot, &manifest);
 
             assert_eq!(delta.added.len(), 0);
             assert_eq!(delta.removed.len(), 0);
@@ -199,7 +185,7 @@ mod tests {
 
             let manifest = vec![];
 
-            let delta = IndexDiffer {}.diff(&snapshot, &manifest);
+            let delta = diff_file_index_metadata(&snapshot, &manifest);
 
             assert_eq!(delta.added.len(), 0);
             assert_eq!(delta.modified.len(), 0);

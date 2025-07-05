@@ -1,4 +1,4 @@
-use crate::file_scanner::FileIndexMetadata;
+use crate::file_status_index::FileIndexMetadata;
 use crate::schema::CodeIndexSchema;
 use std::path::PathBuf;
 use tantivy::tokenizer::NgramTokenizer;

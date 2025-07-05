@@ -1,4 +1,5 @@
-use engine::{FsStorage, IndexCatalog};
+use engine::storage::FsStorage;
+use engine::IndexCatalog;
 
 use std::path::PathBuf;
 
@@ -9,13 +10,6 @@ use crate::cli::{get_beetle_home, CliRunResult, Runner};
 pub struct BeetleRunner {
     options: BeetleCommand,
     catalog: IndexCatalog,
-}
-
-impl BeetleRunner {
-    fn get_index_path(index_name: &str) -> PathBuf {
-        let beetle_home = get_beetle_home();
-        PathBuf::from(beetle_home).join("indexes").join(index_name)
-    }
 }
 
 impl Runner for BeetleRunner {

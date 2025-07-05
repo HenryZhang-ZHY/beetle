@@ -1,4 +1,4 @@
-use crate::file_scanner::{FileScanner, IndexDiffer};
+use crate::file_status_index::{diff_file_index_metadata, FileScanner};
 use crate::index_storage::{IndexStorage, IndexStorageMetadata};
 use crate::schema::{CodeIndexDocument, CodeIndexSchema};
 use tantivy::Index;
@@ -37,8 +37,7 @@ impl<'a> IndexWriter<'a> {
         let file_scanner = FileScanner {};
         let manifest = file_scanner.scan(&self.index_metadata.target_path);
 
-        let index_differr = IndexDiffer {};
-        let delta = index_differr.diff(&file_index_snapshot, &manifest);
+        let delta = diff_file_index_metadata(&file_index_snapshot, &manifest);
 
         let schema = CodeIndexSchema::create();
         let path_field = schema
