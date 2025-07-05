@@ -1,5 +1,4 @@
-use axum::extract::path;
-use engine::{new_index, FsStorage, IndexCatalog, IndexManager, IndexingOptions};
+use engine::{FsStorage, IndexCatalog, IndexManager};
 
 use std::path::PathBuf;
 
@@ -39,9 +38,8 @@ impl Runner for BeetleRunner {
                 .create(&index_name, &path_to_be_indexed.to_string_lossy())
             {
                 Ok(_) => CliRunResult::PlainTextResult(format!(
-                    "Index '{}' created successfully at '{}'",
-                    index_name,
-                    BeetleRunner::get_index_path(&index_name).display()
+                    "Index '{}' created successfully",
+                    index_name
                 )),
                 Err(e) => CliRunResult::PlainTextResult(format!("{}", e)),
             },
