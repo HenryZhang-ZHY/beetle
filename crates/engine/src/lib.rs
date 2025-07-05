@@ -1,6 +1,7 @@
 mod document;
 mod index_manager;
 mod index_storage;
+mod index_catalog;
 mod schema;
 mod search;
 
