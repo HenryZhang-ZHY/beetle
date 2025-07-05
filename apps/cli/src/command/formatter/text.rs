@@ -13,7 +13,7 @@ impl ResultFormatter for PlainTextFormatter {
 
         for result in results {
             output.push_str(&format!(
-                "📄 (score: {:.2}) Path: {}\n   Preview: {}\n\n",
+                "(Score: {:.2}) Path: {}\n   Snippet:\n{}\n\n",
                 result.score, result.path, result.snippet
             ));
         }

@@ -10,7 +10,11 @@ impl CodeIndexSchema {
         let mut schema_builder = Schema::builder();
 
         let path_options = TextOptions::default()
-            .set_indexing_options(TextFieldIndexing::default().set_tokenizer("ngram3"))
+            .set_indexing_options(
+                TextFieldIndexing::default()
+                    .set_tokenizer("ngram3")
+                    .set_index_option(IndexRecordOption::WithFreqsAndPositions),
+            )
             .set_stored();
         schema_builder.add_text_field(Self::PATH_FIELD, path_options);
 

@@ -54,9 +54,6 @@ impl<'a> IndexSearcher<'a> {
                 schema.get_field(CodeIndexSchema::PATH_FIELD).unwrap(),
                 content_field,
                 schema.get_field(CodeIndexSchema::EXTENSION_FIELD).unwrap(),
-                schema
-                    .get_field(CodeIndexSchema::LAST_MODIFIED_FIELD)
-                    .unwrap(),
             ],
         );
         let parsed_query = query_parser
