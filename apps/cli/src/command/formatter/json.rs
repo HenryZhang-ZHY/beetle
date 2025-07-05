@@ -1,4 +1,4 @@
-use super::{IndexingStats, ResultFormatter};
+use super::ResultFormatter;
 use engine::SearchResultItem;
 
 use serde::{Deserialize, Serialize};
@@ -42,23 +42,6 @@ impl ResultFormatter for JsonFormatter {
                 })
                 .collect(),
         };
-
-        if self.pretty {
-            serde_json::to_string_pretty(&output).unwrap_or("".to_string())
-        } else {
-            serde_json::to_string(&output).unwrap_or("".to_string())
-        }
-    }
-
-    fn format_indexing_stats(&self, stats: &IndexingStats) -> String {
-        let output = serde_json::json!({
-            "success": true,
-            "index_name": stats.index_name,
-            "index_path": stats.index_path.display().to_string(),
-            "file_count": stats.file_count,
-            "total_size": stats.total_size,
-            "repo_path": stats.repo_path.display().to_string(),
-        });
 
         if self.pretty {
             serde_json::to_string_pretty(&output).unwrap_or("".to_string())

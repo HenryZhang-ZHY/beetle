@@ -1,10 +1,10 @@
-use engine::{FsStorage, IndexCatalog, IndexManager};
+use engine::{FsStorage, IndexCatalog};
 
 use std::path::PathBuf;
 
 use super::{BeetleCommand, JsonFormatter, OutputFormat, PlainTextFormatter, ResultFormatter};
 use crate::cli::{get_beetle_home, CliRunResult, Runner};
-use crate::server::HttpServer;
+// use crate::server::HttpServer;
 
 pub struct BeetleRunner {
     options: BeetleCommand,
@@ -116,7 +116,7 @@ impl Runner for BeetleRunner {
                     )),
                 }
             }
-            BeetleCommand::Serve { port } => HttpServer::start(port),
+            BeetleCommand::Serve { port } => CliRunResult::None,
         }
     }
 }

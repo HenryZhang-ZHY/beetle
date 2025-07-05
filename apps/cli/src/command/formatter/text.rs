@@ -1,4 +1,4 @@
-use super::{format_size, IndexingStats, ResultFormatter};
+use super::ResultFormatter;
 use engine::SearchResultItem;
 
 pub struct PlainTextFormatter;
@@ -19,16 +19,5 @@ impl ResultFormatter for PlainTextFormatter {
         }
 
         output
-    }
-
-    fn format_indexing_stats(&self, stats: &IndexingStats) -> String {
-        format!(
-            "Successfully created index '{}':\n  Index path: {}\n  Files indexed: {}\n  Total content size: {}\n  Repository path: {}",
-            stats.index_name,
-            stats.index_path.display(),
-            stats.file_count,
-            format_size(stats.total_size),
-            stats.repo_path.display()
-        )
     }
 }
