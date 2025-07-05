@@ -1,5 +1,7 @@
+use std::time::SystemTime;
+
 use tantivy::schema::*;
-use tantivy::schema::{Schema, FAST, STORED, STRING};
+use tantivy::TantivyDocument;
 
 pub struct CodeIndexSchema;
 
@@ -31,4 +33,57 @@ impl CodeIndexSchema {
     pub const CONTENT_FIELD: &'static str = "content";
     pub const EXTENSION_FIELD: &'static str = "extension";
     pub const LAST_MODIFIED_FIELD: &'static str = "last_modified";
+}
+
+pub struct CodeIndexDocument {
+    pub path: String,
+    pub content: String,
+    pub extension: String,
+    pub last_modified: SystemTime,
+}
+
+impl CodeIndexDocument {
+    pub fn new(
+        path: String,
+        content: String,
+        extension: String,
+        last_modified: SystemTime,
+    ) -> Self {
+        CodeIndexDocument {
+            path,
+            content,
+            extension,
+            last_modified,
+        }
+    }
+
+    pub fn to_tantivy_document(&self, schema: &Schema) -> TantivyDocument {
+        let mut doc = TantivyDocument::new();
+        doc.add_text(
+            schema.get_field(CodeIndexSchema::PATH_FIELD).unwrap(),
+            &self.path,
+        );
+        doc.add_text(
+            schema.get_field(CodeIndexSchema::CONTENT_FIELD).unwrap(),
+            &self.content,
+        );
+        doc.add_text(
+            schema.get_field(CodeIndexSchema::EXTENSION_FIELD).unwrap(),
+            &self.extension,
+        );
+
+        // convert SystemTime to tantivy DateTime
+        let last_modified = self
+            .last_modified
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64;
+        doc.add_date(
+            schema
+                .get_field(CodeIndexSchema::LAST_MODIFIED_FIELD)
+                .unwrap(),
+            tantivy::DateTime::from_timestamp_secs(last_modified),
+        );
+        doc
+    }
 }

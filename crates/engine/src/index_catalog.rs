@@ -1,4 +1,5 @@
 use crate::index_storage::{IndexStorage, IndexStorageMetadata};
+use crate::index_writter::IndexWriter;
 
 pub struct IndexCatalog {
     storage: Box<dyn IndexStorage>,
@@ -17,6 +18,27 @@ impl IndexCatalog {
             .map_err(|e| format!("Failed to create index {}: {}", index_name, e))?;
 
         Ok(())
+    }
+
+    pub fn get_writer(&self, index_name: &str) -> Result<IndexWriter, String> {
+        let metadata = self
+            .storage
+            .get_metadata(index_name)
+            .map_err(|e| format!("Failed to get metadata for index {}: {}", index_name, e))?;
+
+        let index = self
+            .storage
+            .open(index_name)
+            .map_err(|e| format!("Failed to open index {}: {}", index_name, e))?;
+
+        let writer = IndexWriter::new(self.storage.as_ref(), metadata, index).map_err(|e| {
+            format!(
+                "Failed to create index writer for index {}: {}",
+                index_name, e
+            )
+        })?;
+
+        Ok(writer)
     }
 
     pub fn remove(&self, index_name: &str) -> Result<(), String> {

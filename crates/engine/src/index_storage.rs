@@ -15,6 +15,23 @@ pub trait IndexStorage {
     fn open(&self, index_name: &str) -> Result<Index, String>;
     fn remove(&self, index_name: &str) -> Result<(), String>;
     fn list(&self) -> Result<Vec<IndexStorageMetadata>, String>;
+    fn get_metadata(&self, index_name: &str) -> Result<IndexStorageMetadata, String> {
+        let list = self.list()?;
+        for metadata in list {
+            if metadata.index_name == index_name {
+                return Ok(metadata);
+            }
+        }
+
+        Err(format!("Index {} not found", index_name))
+    }
+    fn reset(&self, index_name: &str) -> Result<(), String> {
+        let metadata = self.get_metadata(index_name)?;
+        self.remove(index_name)?;
+        self.create(&metadata.index_name, &metadata.target_path)?;
+
+        Ok(())
+    }
 }
 
 pub struct FsStorage {
