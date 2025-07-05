@@ -1,9 +1,9 @@
 use tantivy::schema::*;
 use tantivy::schema::{Schema, FAST, STORED, STRING};
 
-pub struct IndexSchema;
+pub struct CodeIndexSchema;
 
-impl IndexSchema {
+impl CodeIndexSchema {
     pub fn create() -> Schema {
         let mut schema_builder = Schema::builder();
 

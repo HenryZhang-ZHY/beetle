@@ -4,7 +4,7 @@ use tantivy::query::QueryParser;
 use tantivy::{Index, IndexReader, Searcher};
 
 use crate::document::Document;
-use crate::schema::IndexSchema;
+use crate::schema::CodeIndexSchema;
 
 use crate::index_manager::IndexManager;
 
@@ -31,8 +31,8 @@ impl IndexManager {
 
         let searcher = IndexManager::create_searcher(&index)?;
         let schema = index.schema();
-        let path_field = schema.get_field(IndexSchema::PATH_FIELD)?;
-        let content_field = schema.get_field(IndexSchema::CONTENT_FIELD)?;
+        let path_field = schema.get_field(CodeIndexSchema::PATH_FIELD)?;
+        let content_field = schema.get_field(CodeIndexSchema::CONTENT_FIELD)?;
 
         let query_parser = QueryParser::for_index(&index, vec![path_field, content_field]);
         let query = query_parser

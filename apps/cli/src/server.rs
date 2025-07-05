@@ -58,7 +58,7 @@ struct Snippet {
 
     jump_to_line_number: usize,
 
-    lines: Vec<String>
+    lines: Vec<String>,
 }
 
 #[derive(Serialize)]

@@ -160,9 +160,9 @@ pub struct IndexingStats { file_count: u64, total_size: u64, duration_ms: u64 }
 |---|----------------------|--------------------|--------|
 | 1 | Create empty `engine` crate/modules; run `cargo check`. | Workspace compiles. | DONE |
 | 2 | Implement `schema.rs`: `IndexSchema::create`, `CONTENT_FIELD`, `PATH_FIELD`. | Unit test passes. | DONE |
-| 3 | Declare `trait IndexStorage` and stub `FsStorage { root }`. | Compiles. | TODO |
-| 4 | Implement `FsStorage::index_dir / create / open`. | `storage_create_open` test. | TODO |
-| 5 | Implement `FsStorage::remove / list` with tests. | Tests pass. | TODO |
+| 3 | Declare `trait IndexStorage` and stub `FsStorage { root }`. | Compiles. | DONE |
+| 4 | Implement `FsStorage::index_dir / create / open`. | `storage_create_open` test. | DONE |
+| 5 | Implement `FsStorage::remove / list` with tests. | Tests pass. | DONE |
 | 6 | Add `indexing_options.rs` and `is_text_file` helper (serde-ready). | `cargo check` ok. | TODO |
 | 7 | Implement `file_scanner.rs` → `FileScanner::scan`. | Snapshot test. | TODO |
 | 8 | Implement `manifest_store.rs` (`load / store`). | Round-trip test. | TODO |

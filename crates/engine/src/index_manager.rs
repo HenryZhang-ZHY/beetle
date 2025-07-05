@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use tantivy::{Index, IndexWriter, ReloadPolicy};
 
 use crate::document::Document;
-use crate::schema::IndexSchema;
+use crate::schema::CodeIndexSchema;
 
 /// Options for controlling indexing behavior, particularly around git ignore rules
 ///
@@ -126,7 +126,7 @@ impl IndexManager {
             )
         })?;
 
-        let schema = IndexSchema::create();
+        let schema = CodeIndexSchema::create();
         let index = Index::create_in_dir(&self.index_path, schema.clone())
             .with_context(|| "Failed to create tantivy index")?;
 
@@ -164,8 +164,8 @@ impl IndexManager {
         path_to_be_indexed: &PathBuf,
         options: &IndexingOptions,
     ) -> Result<IndexingStats> {
-        let content_field = schema.get_field(IndexSchema::CONTENT_FIELD)?;
-        let path_field = schema.get_field(IndexSchema::PATH_FIELD)?;
+        let content_field = schema.get_field(CodeIndexSchema::CONTENT_FIELD)?;
+        let path_field = schema.get_field(CodeIndexSchema::PATH_FIELD)?;
 
         let mut stats = IndexingStats::default();
 
