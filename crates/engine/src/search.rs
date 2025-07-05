@@ -28,17 +28,14 @@ impl IndexSearcher {
     }
 
     pub fn search(&self, query: &str) -> Result<Vec<SearchResultItem>, String> {
-        let schema = CodeIndexSchema::create();
-        let content_field = schema
-            .get_field(CodeIndexSchema::CONTENT_FIELD)
-            .map_err(|e| format!("Failed to get content field: {}", e))?;
+        let code_index_schema = CodeIndexSchema::new();
 
         let query_parser = tantivy::query::QueryParser::for_index(
             &self.index,
             vec![
-                schema.get_field(CodeIndexSchema::PATH_FIELD).unwrap(),
-                content_field,
-                schema.get_field(CodeIndexSchema::EXTENSION_FIELD).unwrap(),
+                code_index_schema.path,
+                code_index_schema.content,
+                code_index_schema.extension,
             ],
         );
         let parsed_query = query_parser
@@ -51,7 +48,7 @@ impl IndexSearcher {
             .map_err(|e| format!("Search failed: {}", e))?;
 
         let snippet_generator =
-            SnippetGenerator::create(&searcher, &parsed_query, content_field).unwrap();
+            SnippetGenerator::create(&searcher, &parsed_query, code_index_schema.content).unwrap();
 
         let mut results = Vec::new();
         for (_score, doc_address) in top_docs {
@@ -60,13 +57,13 @@ impl IndexSearcher {
                 .map_err(|e| format!("Failed to retrieve document: {}", e))?;
 
             let path = doc
-                .get_first(schema.get_field(CodeIndexSchema::PATH_FIELD).unwrap())
+                .get_first(code_index_schema.path)
                 .unwrap()
                 .as_str()
                 .unwrap();
             let snippet = snippet_generator.snippet_from_doc(&doc);
             let extension = doc
-                .get_first(schema.get_field(CodeIndexSchema::EXTENSION_FIELD).unwrap())
+                .get_first(code_index_schema.extension)
                 .unwrap()
                 .as_str()
                 .unwrap();

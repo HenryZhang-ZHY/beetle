@@ -3,10 +3,17 @@ use std::time::SystemTime;
 use tantivy::schema::*;
 use tantivy::TantivyDocument;
 
-pub struct CodeIndexSchema;
+#[allow(dead_code)]
+pub struct CodeIndexSchema {
+    pub schema: Schema,
+    pub path: Field,
+    pub content: Field,
+    pub extension: Field,
+    pub last_modified: Field,
+}
 
 impl CodeIndexSchema {
-    pub fn create() -> Schema {
+    pub fn new() -> CodeIndexSchema {
         let mut schema_builder = Schema::builder();
 
         let path_options = TextOptions::default()
@@ -16,7 +23,7 @@ impl CodeIndexSchema {
                     .set_index_option(IndexRecordOption::WithFreqsAndPositions),
             )
             .set_stored();
-        schema_builder.add_text_field(Self::PATH_FIELD, path_options);
+        let path = schema_builder.add_text_field(Self::PATH_FIELD, path_options);
 
         let content_options = TextOptions::default()
             .set_indexing_options(
@@ -25,12 +32,18 @@ impl CodeIndexSchema {
                     .set_index_option(IndexRecordOption::WithFreqsAndPositions),
             )
             .set_stored();
-        schema_builder.add_text_field(Self::CONTENT_FIELD, content_options);
+        let content = schema_builder.add_text_field(Self::CONTENT_FIELD, content_options);
 
-        schema_builder.add_text_field(Self::EXTENSION_FIELD, STRING | STORED);
-        schema_builder.add_date_field(Self::LAST_MODIFIED_FIELD, FAST | STORED);
+        let extension = schema_builder.add_text_field(Self::EXTENSION_FIELD, STRING | STORED);
+        let last_modified = schema_builder.add_date_field(Self::LAST_MODIFIED_FIELD, FAST | STORED);
 
-        schema_builder.build()
+        Self {
+            schema: schema_builder.build(),
+            path,
+            content,
+            extension,
+            last_modified,
+        }
     }
 
     pub const PATH_FIELD: &'static str = "path";

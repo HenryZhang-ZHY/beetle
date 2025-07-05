@@ -39,22 +39,20 @@ impl<'a> IndexWriter<'a> {
 
         let delta = diff_file_index_metadata(&file_index_snapshot, &manifest);
 
-        let schema = CodeIndexSchema::create();
-        let path_field = schema
-            .get_field(CodeIndexSchema::PATH_FIELD)
-            .map_err(|e| format!("Failed to get path field: {}", e))?;
-
+        let code_index_schema = CodeIndexSchema::new();
         let removed = delta.removed;
         for file in removed {
             let file_path = file.path.clone();
-            self.writer
-                .delete_term(tantivy::Term::from_field_text(path_field, &file_path));
+            self.writer.delete_term(tantivy::Term::from_field_text(
+                code_index_schema.path,
+                &file_path,
+            ));
         }
 
         let files_to_update = delta.added.into_iter().chain(delta.modified);
         for file in files_to_update {
             let document = CodeIndexDocument::from_path(&file.path);
-            let tantivy_doc = document.to_tantivy_document(&schema);
+            let tantivy_doc = document.to_tantivy_document(&code_index_schema.schema);
             self.writer.add_document(tantivy_doc).map_err(|e| {
                 format!(
                     "Failed to add document to index {}: {}",

@@ -112,7 +112,7 @@ impl IndexStorage for FsStorage {
         let index_path = absolute_index_root_path.join("index");
         std::fs::create_dir_all(&index_path)
             .map_err(|e| format!("Failed to create index directory {}: {}", index_name, e))?;
-        let index = Index::create_in_dir(&index_path, CodeIndexSchema::create())
+        let index = Index::create_in_dir(&index_path, CodeIndexSchema::new().schema)
             .map_err(|e| format!("Failed to create index {}: {}", index_name, e))?;
         index
             .tokenizers()
