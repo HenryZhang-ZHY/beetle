@@ -74,28 +74,26 @@ impl Runner for BeetleRunner {
                     }
                 }
             }
-            BeetleCommand::List => {
-                let beetle_home = get_beetle_home();
-                let index_path = PathBuf::from(beetle_home).join("indexes");
-
-                let mut index_names = Vec::new();
-                if let Ok(entries) = std::fs::read_dir(&index_path) {
-                    for entry in entries.flatten() {
-                        if entry.file_type().map_or(false, |ft| ft.is_dir()) {
-                            if let Some(name) = entry.file_name().to_str() {
-                                index_names.push(name.to_string());
-                            }
-                        }
+            BeetleCommand::List => match self.catalog.list() {
+                Ok(indexes) => {
+                    if indexes.is_empty() {
+                        return CliRunResult::PlainTextResult("No indexes found".to_string());
                     }
-                }
 
-                if index_names.is_empty() {
-                    CliRunResult::PlainTextResult("No indexes found".to_string())
-                } else {
-                    let formatted_list = index_names.join("\n");
-                    CliRunResult::PlainTextResult(formatted_list)
+                    let plain_text_result = indexes
+                        .iter()
+                        .map(|metadata| {
+                            format!(
+                                "Index Name: {}, Target Path: {}",
+                                metadata.index_name, metadata.target_path
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    CliRunResult::PlainTextResult(plain_text_result)
                 }
-            }
+                Err(e) => CliRunResult::PlainTextResult(format!("Error listing indexes: {}", e)),
+            },
 
             BeetleCommand::Remove { index_name } => match self.catalog.remove(&index_name) {
                 Ok(_) => CliRunResult::PlainTextResult(format!(
