@@ -87,7 +87,10 @@ impl FileScanner {
         };
 
         let path_str = match dir_entry.path().to_str() {
-            Some(path) => path,
+            Some(path) => dunce::canonicalize(path)
+                .unwrap_or_else(|_| dir_entry.path().to_path_buf())
+                .to_string_lossy()
+                .to_string(),
             None => return,
         };
 

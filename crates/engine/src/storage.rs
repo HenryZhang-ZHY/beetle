@@ -53,8 +53,8 @@ impl FsStorage {
 
     fn get_file_index_path(&self, index_name: &str) -> Result<PathBuf, String> {
         let index_metadata = self.get_metadata(index_name)?;
-        let file_index_path =
-            PathBuf::from(&index_metadata.index_path).join(Self::FILE_INDEX_SNAPSHOT_JSON_FILE_NAME);
+        let file_index_path = PathBuf::from(&index_metadata.index_path)
+            .join(Self::FILE_INDEX_SNAPSHOT_JSON_FILE_NAME);
 
         Ok(file_index_path)
     }
@@ -70,10 +70,7 @@ impl IndexStorage for FsStorage {
 
     fn create(&self, index_name: &str, target_path: &str) -> Result<Index, String> {
         let index_root_path = self.root.join(index_name);
-        let absolute_index_root_path = self
-            .root
-            .join(index_name)
-            .canonicalize()
+        let absolute_index_root_path = dunce::canonicalize(self.root.join(index_name))
             .unwrap_or_else(|_| PathBuf::from(&index_root_path));
         if absolute_index_root_path.exists() {
             return Err(format!("Index {} already exists", index_name));
@@ -81,8 +78,7 @@ impl IndexStorage for FsStorage {
         std::fs::create_dir_all(&absolute_index_root_path)
             .map_err(|e| format!("Failed to create index directory {}: {}", index_name, e))?;
 
-        let absolute_target_path = PathBuf::from(target_path)
-            .canonicalize()
+        let absolute_target_path = dunce::canonicalize(PathBuf::from(target_path))
             .unwrap_or_else(|_| PathBuf::from(target_path));
         if !absolute_target_path.exists() {
             return Err(format!(
