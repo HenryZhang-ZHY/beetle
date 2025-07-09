@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, h } from 'vue'
 import { Search } from 'lucide-vue-next'
 import { Input } from '@/components/ui/input'
 import type {
@@ -86,6 +86,9 @@ const columns = reactive([
   {
     accessorKey: 'snippet',
     header: 'Snippet',
+    cell: ({ row }) => {
+      return h('div', { innerHTML: row.getValue('snippet') })
+    },
   },
 ])
 
@@ -111,3 +114,11 @@ const search = async () => {
 }
 
 </script>
+
+<style scoped>
+:deep(b) {
+  background-color: #dbebfe;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+</style>
