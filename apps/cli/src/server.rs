@@ -1,289 +1,210 @@
-// use crate::cli::CliRunResult;
-// use axum::{
-//     extract::{Path, Query},
-//     http::StatusCode,
-//     response::Json as ResponseJson,
-//     routing::get,
-//     Router,
-// };
-// use engine::IndexManager;
-// use serde::{Deserialize, Serialize};
-// use std::path::PathBuf;
-// use tokio::signal;
+use crate::cli::get_beetle_home;
+use crate::cli::CommandOutput;
+use axum::{
+    extract::{Path, Query},
+    http::StatusCode,
+    response::Json as ResponseJson,
+    routing::get,
+    Router,
+};
+use engine::search::SearchResultItem;
+use engine::storage::FsStorage;
+use engine::IndexCatalog;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use tokio::signal;
 
-// #[derive(Serialize)]
-// struct IndexResponse {
-//     name: String,
-//     path: String,
-// }
+#[derive(Serialize)]
+struct IndexResponse {
+    name: String,
+    path: String,
+}
 
-// #[derive(Serialize)]
-// struct IndexDetailResponse {
-//     name: String,
-//     path: String,
-//     metadata: IndexMetadataResponse,
-// }
+#[derive(Serialize)]
+struct IndexDetailResponse {
+    index_name: String,
+    index_path: String,
+    target_path: String,
+}
 
-// #[derive(Serialize)]
-// struct IndexMetadataResponse {
-//     doc_count: u64,
-//     size_bytes: u64,
-// }
+#[derive(Serialize)]
+struct IndexMetadataResponse {
+    doc_count: u64,
+    size_bytes: u64,
+}
 
-// #[derive(Serialize)]
-// struct SearchResponse {
-//     query: String,
-//     index_name: String,
-//     results: Vec<SearchResultItem>,
-//     total_results: usize,
-//     limit: usize,
-// }
+#[derive(Serialize)]
+struct SearchResponse {
+    query: String,
+    index_name: String,
+    results: Vec<SearchResultItem>,
+    total_results: usize,
+}
 
-// #[derive(Serialize)]
-// struct SearchResultItem {
-//     path: String,
-//     content: String,
-//     score: f32,
-//     line_number: Option<u32>,
-//     snippets: Vec<Snippet>,
-// }
+#[derive(Serialize)]
+struct Snippet {
+    start: usize,
+    end: usize,
 
-// #[derive(Serialize)]
-// struct Snippet {
-//     start: usize,
-//     end: usize,
+    starting_line_number: usize,
+    ending_line_number: usize,
 
-//     starting_line_number: usize,
-//     ending_line_number: usize,
+    jump_to_line_number: usize,
 
-//     jump_to_line_number: usize,
+    lines: Vec<String>,
+}
 
-//     lines: Vec<String>,
-// }
+#[derive(Serialize)]
+struct ErrorResponse {
+    error: String,
+}
 
-// #[derive(Serialize)]
-// struct ErrorResponse {
-//     error: String,
-// }
+#[derive(Deserialize)]
+struct SearchQuery {
+    q: String,
+}
 
-// #[derive(Deserialize)]
-// struct SearchQuery {
-//     q: String,
-//     format: Option<String>,
-//     limit: Option<usize>,
-// }
+fn create_index_catalog() -> IndexCatalog {
+    let beetl_home_path = PathBuf::from(get_beetle_home());
+    let storage = FsStorage::new(beetl_home_path);
 
-// // GET /indexes - List all indexes
-// async fn list_indexes() -> ResponseJson<Vec<IndexResponse>> {
-//     let beetle_home = get_beetle_home();
-//     let index_path = PathBuf::from(beetle_home);
-//     let index_manager = IndexManager::new(index_path);
+    IndexCatalog::new(storage)
+}
 
-//     match index_manager.list_indexes() {
-//         Ok(indexes) => {
-//             let response: Vec<IndexResponse> = indexes
-//                 .into_iter()
-//                 .map(|index_info| IndexResponse {
-//                     name: index_info.name,
-//                     path: index_info.path.to_string_lossy().to_string(),
-//                 })
-//                 .collect();
-//             ResponseJson(response)
-//         }
-//         Err(_) => {
-//             // Return empty list on error
-//             ResponseJson(vec![])
-//         }
-//     }
-// }
+async fn list_indexes() -> ResponseJson<Vec<IndexResponse>> {
+    let catalog = create_index_catalog();
 
-// // GET /indexes/{index_name} - Get specific index details
-// async fn get_index_details(
-//     Path(index_name): Path<String>,
-// ) -> Result<ResponseJson<IndexDetailResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
-//     let beetle_home = get_beetle_home();
-//     let index_path = PathBuf::from(beetle_home);
-//     let index_manager = IndexManager::new(index_path);
+    match catalog.list() {
+        Ok(indexes) => {
+            let response: Vec<IndexResponse> = indexes
+                .into_iter()
+                .map(|index| IndexResponse {
+                    name: index.index_name,
+                    path: index.index_path,
+                })
+                .collect();
+            ResponseJson(response)
+        }
+        Err(_) => {
+            // Return empty list on error
+            ResponseJson(vec![])
+        }
+    }
+}
 
-//     match index_manager.list_indexes() {
-//         Ok(indexes) => {
-//             if let Some(index_info) = indexes.into_iter().find(|idx| idx.name == index_name) {
-//                 let response = IndexDetailResponse {
-//                     name: index_info.name,
-//                     path: index_info.path.to_string_lossy().to_string(),
-//                     metadata: IndexMetadataResponse {
-//                         doc_count: index_info.metadata.doc_count,
-//                         size_bytes: index_info.metadata.size_bytes,
-//                     },
-//                 };
-//                 Ok(ResponseJson(response))
-//             } else {
-//                 Err((
-//                     StatusCode::NOT_FOUND,
-//                     ResponseJson(ErrorResponse {
-//                         error: format!("Index '{}' not found", index_name),
-//                     }),
-//                 ))
-//             }
-//         }
-//         Err(_) => Err((
-//             StatusCode::INTERNAL_SERVER_ERROR,
-//             ResponseJson(ErrorResponse {
-//                 error: "Failed to list indexes".to_string(),
-//             }),
-//         )),
-//     }
-// }
+async fn get_index_details(
+    Path(index_name): Path<String>,
+) -> Result<ResponseJson<IndexDetailResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
+    let catalog = create_index_catalog();
 
-// // GET /indexes/{index_name}/search - Search within a specific index
-// async fn search_index(
-//     Path(index_name): Path<String>,
-//     Query(params): Query<SearchQuery>,
-// ) -> Result<ResponseJson<SearchResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
-//     let beetle_home = get_beetle_home();
-//     let index_path = PathBuf::from(&beetle_home)
-//         .join("indexes")
-//         .join(&index_name);
-//     let index_manager = IndexManager::new(index_path);
+    match catalog.get_matadata(&index_name) {
+        Ok(metadata) => {
+            let response = IndexDetailResponse {
+                index_name: metadata.index_name.clone(),
+                index_path: metadata.index_path.clone(),
+                target_path: metadata.target_path.clone(),
+            };
+            Ok(ResponseJson(response))
+        }
+        Err(_) => Err((
+            StatusCode::NOT_FOUND,
+            ResponseJson(ErrorResponse {
+                error: format!("Index '{}' not found", index_name),
+            }),
+        )),
+    }
+}
 
-//     // Check if index exists first
-//     let beetle_index_path = PathBuf::from(beetle_home);
-//     let beetle_index_manager = IndexManager::new(beetle_index_path);
+async fn search_index(
+    Path(index_name): Path<String>,
+    Query(params): Query<SearchQuery>,
+) -> Result<ResponseJson<SearchResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
+    let catalog = create_index_catalog();
 
-//     match beetle_index_manager.list_indexes() {
-//         Ok(indexes) => {
-//             if !indexes.iter().any(|idx| idx.name == index_name) {
-//                 return Err((
-//                     StatusCode::NOT_FOUND,
-//                     ResponseJson(ErrorResponse {
-//                         error: format!("Index '{}' not found", index_name),
-//                     }),
-//                 ));
-//             }
-//         }
-//         Err(_) => {
-//             return Err((
-//                 StatusCode::INTERNAL_SERVER_ERROR,
-//                 ResponseJson(ErrorResponse {
-//                     error: "Failed to check index existence".to_string(),
-//                 }),
-//             ));
-//         }
-//     }
+    let query = params.q;
 
-//     // Perform search
-//     match index_manager.search(&params.q) {
-//         Ok(search_results) => {
-//             let limit = params.limit.unwrap_or(10);
-//             let results: Vec<SearchResultItem> = search_results
-//                 .into_iter()
-//                 .take(limit)
-//                 .map(|result| SearchResultItem {
-//                     path: result.path,
-//                     content: result.snippet,
-//                     score: result.score,
-//                     line_number: None, // Not available in current SearchResult
-//                     snippets: vec![],
-//                 })
-//                 .collect();
+    match catalog.get_searcher(&index_name) {
+        Ok(searcher) => {
+            let results = searcher.search(&query).map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ResponseJson(ErrorResponse {
+                        error: format!("Search failed: {}", e),
+                    }),
+                )
+            })?;
+            let total_results = results.len();
+            let response = SearchResponse {
+                query: query.clone(),
+                index_name: index_name.clone(),
+                results,
+                total_results,
+            };
+            Ok(ResponseJson(response))
+        }
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ResponseJson(ErrorResponse {
+                error: format!("Search failed: {}", e),
+            }),
+        )),
+    }
+}
 
-//             let total_results = results.len();
+pub struct HttpServer;
 
-//             let response = SearchResponse {
-//                 query: params.q,
-//                 index_name,
-//                 results,
-//                 total_results,
-//                 limit,
-//             };
+impl HttpServer {
+    pub fn start(port: u16) -> CommandOutput {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
 
-//             Ok(ResponseJson(response))
-//         }
-//         Err(_) => Err((
-//             StatusCode::INTERNAL_SERVER_ERROR,
-//             ResponseJson(ErrorResponse {
-//                 error: "Search failed: internal error".to_string(),
-//             }),
-//         )),
-//     }
-// }
+        runtime.block_on(async move {
+            let app = Router::new()
+                .route("/api/indexes", get(list_indexes))
+                .route("/api/indexes/{index_name}", get(get_index_details))
+                .route("/api/indexes/{index_name}/search", get(search_index));
 
-// async fn shutdown_signal() {
-//     let ctrl_c = async {
-//         signal::ctrl_c()
-//             .await
-//             .expect("failed to install Ctrl+C handler");
-//     };
+            let address = format!("{}:{}", "localhost", port);
+            let listener = match tokio::net::TcpListener::bind(&address).await {
+                Ok(listener) => listener,
+                Err(e) => {
+                    return CommandOutput::Error(format!("Failed to bind to {}: {}", address, e));
+                }
+            };
+            println!("Server running on http://{}", address);
 
-//     #[cfg(unix)]
-//     let terminate = async {
-//         signal::unix::signal(signal::unix::SignalKind::terminate())
-//             .expect("failed to install signal handler")
-//             .recv()
-//             .await;
-//     };
+            let result = axum::serve(listener, app)
+                .with_graceful_shutdown(Self::shutdown_signal())
+                .await;
+            match result {
+                Ok(_) => CommandOutput::Success("Server stopped gracefully".to_string()),
+                Err(e) => CommandOutput::Error(format!("Server error: {}", e)),
+            }
+        })
+    }
 
-//     #[cfg(not(unix))]
-//     let terminate = std::future::pending::<()>();
+    async fn shutdown_signal() {
+        let ctrl_c = async {
+            signal::ctrl_c()
+                .await
+                .expect("failed to install Ctrl+C handler");
+        };
 
-//     tokio::select! {
-//         _ = ctrl_c => {},
-//         _ = terminate => {},
-//     }
+        #[cfg(unix)]
+        let terminate = async {
+            signal::unix::signal(signal::unix::SignalKind::terminate())
+                .expect("failed to install signal handler")
+                .recv()
+                .await;
+        };
 
-//     println!("Received shutdown signal, stopping server gracefully...");
-// }
+        #[cfg(not(unix))]
+        let terminate = std::future::pending::<()>();
 
-// fn get_beetle_home() -> String {
-//     std::env::var("BEETLE_HOME").unwrap_or_else(|_| {
-//         let home_dir = std::env::var("HOME")
-//             .or_else(|_| std::env::var("USERPROFILE"))
-//             .unwrap_or_else(|_| ".".to_string());
-//         format!("{}/.beetle", home_dir)
-//     })
-// }
+        tokio::select! {
+            _ = ctrl_c => {},
+            _ = terminate => {},
+        }
 
-// pub struct HttpServer;
-
-// impl HttpServer {
-//     /// Start the HTTP server on the specified port
-//     pub fn start(port: u16) -> CliRunResult {
-//         // Since we can't make this method async, we'll use a runtime
-//         let rt = tokio::runtime::Runtime::new().unwrap();
-
-//         rt.block_on(async move {
-//             // Build our application with RESTful routes
-//             let app = Router::new()
-//                 .route("/", get(|| async { "hello world" }))
-//                 .route("/indexes", get(list_indexes))
-//                 .route("/indexes/{index_name}", get(get_index_details))
-//                 .route("/indexes/{index_name}/search", get(search_index));
-
-//             // Create the address
-//             let addr = format!("{}:{}", "localhost", port);
-
-//             // Create a TCP listener
-//             let listener = match tokio::net::TcpListener::bind(&addr).await {
-//                 Ok(listener) => listener,
-//                 Err(e) => {
-//                     return CliRunResult::PlainTextResult(format!(
-//                         "Failed to bind to {}: {}",
-//                         addr, e
-//                     ));
-//                 }
-//             };
-
-//             println!("Server running on http://{}", addr);
-
-//             // Start the server with graceful shutdown
-//             let result = axum::serve(listener, app)
-//                 .with_graceful_shutdown(shutdown_signal())
-//                 .await;
-
-//             match result {
-//                 Ok(_) => CliRunResult::PlainTextResult("Server stopped gracefully".to_string()),
-//                 Err(e) => CliRunResult::PlainTextResult(format!("Server error: {}", e)),
-//             }
-//         })
-//     }
-// }
+        println!("Received shutdown signal, stopping server gracefully...");
+    }
+}

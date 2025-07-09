@@ -7,9 +7,10 @@ pub mod cli {
     use std::path::PathBuf;
 
     pub use crate::{
-        command::{beetle_command, BeetleRunner},
+        command::{beetle_command, BeetleRunner, CommandOutput},
         result::CliRunResult,
         runner::Runner,
+        server::HttpServer,
     };
 
     pub fn get_beetle_home() -> String {

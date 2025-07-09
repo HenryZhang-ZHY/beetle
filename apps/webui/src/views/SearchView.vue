@@ -4,7 +4,7 @@
     <div class="w-full max-w-10xl mx-auto">
       <div class="relative">
         <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input v-model="searchQuery" placeholder="Search..." class="pl-10 pr-4 py-2 w-full" />
+        <Input v-model="queryString" placeholder="Search..." class="pl-10 pr-4 py-2 w-full" @keyup.enter="search" />
       </div>
     </div>
 
@@ -75,41 +75,17 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-// Reactive state
-const searchQuery = ref('')
-const isLoading = ref(false)
-const data = [
-  {
-    id: '1',
-    title: 'Sample Result 1',
-    description: 'This is a sample search result',
-    createdAt: '2024-01-01',
-  },
-  {
-    id: '2',
-    title: 'Sample Result 2',
-    description: 'Another sample search result',
-    createdAt: '2024-01-02',
-  }
-]
+const queryString = ref('')
+const data = ref([])
 
-// Table columns configuration
 const columns = reactive([
   {
-    accessorKey: 'id',
-    header: 'ID',
+    accessorKey: 'path',
+    header: 'Path',
   },
   {
-    accessorKey: 'title',
-    header: 'Title',
-  },
-  {
-    accessorKey: 'description',
-    header: 'Description',
-  },
-  {
-    accessorKey: 'createdAt',
-    header: 'Created At',
+    accessorKey: 'snippet',
+    header: 'Snippet',
   },
 ])
 
@@ -122,5 +98,16 @@ const table = useVueTable({
   getFilteredRowModel: getFilteredRowModel(),
   getExpandedRowModel: getExpandedRowModel(),
 })
+
+const search = async () => {
+  const response = await fetch(`/api/indexes/beetle/search?q=${encodeURIComponent(queryString.value)}`)
+  if (!response.ok) {
+    console.error('Search request failed:', response.statusText)
+    return
+  }
+
+  const results = await response.json()
+  data.value = results.results
+}
 
 </script>

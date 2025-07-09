@@ -10,7 +10,7 @@ mod update;
 
 pub use runner::BeetleRunner;
 
-pub use formatter::{JsonFormatter, PlainTextFormatter, ResultFormatter};
+pub use formatter::{CommandOutput, JsonFormatter, PlainTextFormatter, ResultFormatter};
 
 pub use option::{format, index_name};
 
@@ -169,7 +169,7 @@ mod tests {
         assert!(result.is_ok());
 
         match result.unwrap() {
-            BeetleCommand::List => {}
+            BeetleCommand::List { .. } => {}
             _ => panic!("Expected List command"),
         }
     }

@@ -59,6 +59,10 @@ impl IndexCatalog {
         self.storage.list()
     }
 
+    pub fn get_matadata(&self, index_name: &str) -> Result<IndexStorageMetadata, String> {
+        self.storage.get_metadata(index_name)
+    }
+
     pub fn reset(&self, index_name: &str) -> Result<(), String> {
         self.storage.reset(index_name)?;
 

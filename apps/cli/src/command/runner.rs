@@ -7,6 +7,7 @@ use super::{BeetleCommand, JsonFormatter, OutputFormat, PlainTextFormatter, Resu
 use crate::{
     cli::{get_beetle_home, CliRunResult, Runner},
     command::formatter::CommandOutput,
+    server::HttpServer,
 };
 
 pub struct BeetleRunner {
@@ -67,9 +68,7 @@ impl BeetleRunner {
                     index_name
                 )))
             }
-            BeetleCommand::Serve { port: _ } => {
-                Ok(CommandOutput::Error("Serve Not Implemented".to_string()))
-            }
+            BeetleCommand::Serve { port } => Ok(HttpServer::start(port)),
         }
     }
 }

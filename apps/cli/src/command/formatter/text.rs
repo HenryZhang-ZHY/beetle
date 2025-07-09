@@ -12,7 +12,7 @@ impl ResultFormatter for PlainTextFormatter {
                 .map(|index| {
                     format!(
                         "{} {} {}",
-                        index.index_name, index.index_dir, index.target_path
+                        index.index_name, index.index_path, index.target_path
                     )
                 })
                 .collect::<Vec<String>>()

@@ -7,7 +7,7 @@ use tantivy::Index;
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct IndexStorageMetadata {
     pub index_name: String,
-    pub index_dir: String,
+    pub index_path: String,
     pub target_path: String,
 }
 
@@ -54,7 +54,7 @@ impl FsStorage {
     fn get_file_index_path(&self, index_name: &str) -> Result<PathBuf, String> {
         let index_metadata = self.get_metadata(index_name)?;
         let file_index_path =
-            PathBuf::from(&index_metadata.index_dir).join(Self::FILE_INDEX_SNAPSHOT_JSON_FILE_NAME);
+            PathBuf::from(&index_metadata.index_path).join(Self::FILE_INDEX_SNAPSHOT_JSON_FILE_NAME);
 
         Ok(file_index_path)
     }
@@ -92,7 +92,7 @@ impl IndexStorage for FsStorage {
         }
         let metadata = IndexStorageMetadata {
             index_name: index_name.to_string(),
-            index_dir: absolute_index_root_path.to_string_lossy().to_string(),
+            index_path: absolute_index_root_path.to_string_lossy().to_string(),
             target_path: absolute_target_path.to_string_lossy().to_string(),
         };
         let metadata_json = serde_json::to_string(&metadata).map_err(|e| {
