@@ -45,7 +45,7 @@ impl IndexSearcher {
 
         let searcher = self.reader.searcher();
         let top_docs = searcher
-            .search(&parsed_query, &tantivy::collector::TopDocs::with_limit(10))
+            .search(&parsed_query, &tantivy::collector::TopDocs::with_limit(10000))
             .map_err(|e| format!("Search failed: {}", e))?;
 
         let snippet_generator =

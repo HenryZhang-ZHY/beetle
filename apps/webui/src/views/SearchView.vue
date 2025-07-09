@@ -10,38 +10,53 @@
 
     <!-- Results Data Table -->
     <div class="w-full">
-      <Table>
-        <TableHeader>
-          <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
-            <TableHead v-for="header in headerGroup.headers" :key="header.id">
-              <FlexRender v-if="!header.isPlaceholder" :render="header.column.columnDef.header"
-                :props="header.getContext()" />
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <template v-if="table.getRowModel().rows?.length">
-            <template v-for="row in table.getRowModel().rows" :key="row.id">
-              <TableRow :data-state="row.getIsSelected() && 'selected'">
-                <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
-                  <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
-                </TableCell>
-              </TableRow>
-              <TableRow v-if="row.getIsExpanded()">
-                <TableCell :colspan="row.getAllCells().length">
-                  {{ JSON.stringify(row.original) }}
-                </TableCell>
-              </TableRow>
+      <div class="max-h-[70vh] overflow-auto">
+        <Table>
+          <TableHeader class="sticky top-0 bg-background z-10">
+            <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
+              <TableHead v-for="header in headerGroup.headers" :key="header.id">
+                <FlexRender v-if="!header.isPlaceholder" :render="header.column.columnDef.header"
+                  :props="header.getContext()" />
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="table.getRowModel().rows?.length">
+              <template v-for="row in table.getRowModel().rows" :key="row.id">
+                <TableRow :data-state="row.getIsSelected() && 'selected'">
+                  <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
+                    <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
+                  </TableCell>
+                </TableRow>
+                <TableRow v-if="row.getIsExpanded()">
+                  <TableCell :colspan="row.getAllCells().length">
+                    {{ JSON.stringify(row.original) }}
+                  </TableCell>
+                </TableRow>
+              </template>
             </template>
-          </template>
 
-          <TableRow v-else>
-            <TableCell :colspan="columns.length" class="h-24 text-center">
-              No results.
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+            <TableRow v-else>
+              <TableCell :colspan="columns.length" class="h-24 text-center">
+                No results.
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+      <div class="flex items-center justify-end space-x-2 py-4">
+        <div class="flex-1 text-sm text-muted-foreground">
+          {{ table.getFilteredRowModel().rows.length }} row(s).
+        </div>
+        <div class="space-x-2">
+          <Button variant="outline" size="sm" :disabled="!table.getCanPreviousPage()" @click="table.previousPage()">
+            Previous
+          </Button>
+          <Button variant="outline" size="sm" :disabled="!table.getCanNextPage()" @click="table.nextPage()">
+            Next
+          </Button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -50,6 +65,7 @@
 import { ref, reactive, h } from 'vue'
 import { Search } from 'lucide-vue-next'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import type {
   ColumnDef,
   ColumnFiltersState,
@@ -100,6 +116,11 @@ const table = useVueTable({
   getSortedRowModel: getSortedRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
   getExpandedRowModel: getExpandedRowModel(),
+  initialState: {
+    pagination: {
+      pageSize: 1000,
+    },
+  },
 })
 
 const search = async () => {
