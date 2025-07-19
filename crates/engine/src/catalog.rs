@@ -30,11 +30,8 @@ impl IndexCatalog {
             .open(index_name)
             .map_err(|e| format!("Failed to open index {index_name}: {e}"))?;
 
-        let writer = IndexWriter::new(self.storage.as_ref(), metadata, index).map_err(|e| {
-            format!(
-                "Failed to create index writer for index {index_name}: {e}"
-            )
-        })?;
+        let writer = IndexWriter::new(self.storage.as_ref(), metadata, index)
+            .map_err(|e| format!("Failed to create index writer for index {index_name}: {e}"))?;
 
         Ok(writer)
     }

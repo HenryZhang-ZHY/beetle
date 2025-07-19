@@ -1,6 +1,7 @@
-use crate::file_status_index::FileIndexMetadata;
+use crate::change::{self, FileIndexMetadata};
 use crate::schema::CodeIndexSchema;
 use crate::tokenizers::CodeTokenizer;
+use std::fs;
 use std::path::PathBuf;
 use tantivy::Index;
 
@@ -53,14 +54,14 @@ impl FsStorage {
 
     fn get_file_index_path(&self, index_name: &str) -> Result<PathBuf, String> {
         let index_metadata = self.get_metadata(index_name)?;
-        let file_index_path = PathBuf::from(&index_metadata.index_path)
-            .join(Self::FILE_INDEX_SNAPSHOT_JSON_FILE_NAME);
+        let file_index_path =
+            PathBuf::from(&index_metadata.index_path).join(Self::FILE_INDEX_SNAPSHOT_FILE_NAME);
 
         Ok(file_index_path)
     }
 
     pub const META_JSON_FILE_NAME: &'static str = "meta.json";
-    pub const FILE_INDEX_SNAPSHOT_JSON_FILE_NAME: &'static str = "file_index_snapshot.json";
+    pub const FILE_INDEX_SNAPSHOT_FILE_NAME: &'static str = "file_index_snapshot.bin";
 }
 
 impl IndexStorage for FsStorage {
@@ -75,7 +76,7 @@ impl IndexStorage for FsStorage {
         if absolute_index_root_path.exists() {
             return Err(format!("Index {index_name} already exists"));
         }
-        std::fs::create_dir_all(&absolute_index_root_path)
+        fs::create_dir_all(&absolute_index_root_path)
             .map_err(|e| format!("Failed to create index directory {index_name}: {e}"))?;
 
         let absolute_target_path = dunce::canonicalize(PathBuf::from(target_path))
@@ -91,20 +92,14 @@ impl IndexStorage for FsStorage {
             index_path: absolute_index_root_path.to_string_lossy().to_string(),
             target_path: absolute_target_path.to_string_lossy().to_string(),
         };
-        let metadata_json = serde_json::to_string(&metadata).map_err(|e| {
-            format!(
-                "Failed to serialize metadata for index {index_name}: {e}"
-            )
-        })?;
+        let metadata_json = serde_json::to_string(&metadata)
+            .map_err(|e| format!("Failed to serialize metadata for index {index_name}: {e}"))?;
         let metadata_path = absolute_index_root_path.join(Self::META_JSON_FILE_NAME);
-        std::fs::write(&metadata_path, metadata_json).map_err(|e| {
-            format!(
-                "Failed to write metadata file for index {index_name}: {e}"
-            )
-        })?;
+        fs::write(&metadata_path, metadata_json)
+            .map_err(|e| format!("Failed to write metadata file for index {index_name}: {e}"))?;
 
         let index_path = absolute_index_root_path.join("index");
-        std::fs::create_dir_all(&index_path)
+        fs::create_dir_all(&index_path)
             .map_err(|e| format!("Failed to create index directory {index_name}: {e}"))?;
         let index = Index::create_in_dir(&index_path, CodeIndexSchema::new().schema)
             .map_err(|e| format!("Failed to create index {index_name}: {e}"))?;
@@ -133,7 +128,7 @@ impl IndexStorage for FsStorage {
     fn remove(&self, index_name: &str) -> Result<(), String> {
         let index_path = self.root.join(index_name);
         if index_path.exists() {
-            std::fs::remove_dir_all(&index_path)
+            fs::remove_dir_all(&index_path)
                 .map_err(|e| format!("Failed to remove index {index_name}: {e}"))?;
             Ok(())
         } else {
@@ -144,8 +139,8 @@ impl IndexStorage for FsStorage {
     fn list(&self) -> Result<Vec<IndexStorageMetadata>, String> {
         let mut indices = Vec::new();
 
-        let entries = std::fs::read_dir(&self.root)
-            .map_err(|e| format!("Failed to read index directory: {e}"))?;
+        let entries =
+            fs::read_dir(&self.root).map_err(|e| format!("Failed to read index directory: {e}"))?;
         for entry in entries {
             let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
             let file_type = entry
@@ -163,7 +158,7 @@ impl IndexStorage for FsStorage {
                 ));
             }
 
-            let metadata_json = std::fs::read_to_string(&index_metadata_path)
+            let metadata_json = fs::read_to_string(&index_metadata_path)
                 .map_err(|e| format!("Failed to read metadata file: {e}"))?;
             let metadata: IndexStorageMetadata = serde_json::from_str(&metadata_json)
                 .map_err(|e| format!("Failed to parse metadata JSON: {e}"))?;
@@ -182,15 +177,10 @@ impl IndexStorage for FsStorage {
         metadata: Vec<FileIndexMetadata>,
     ) -> Result<(), String> {
         let file_index_path = self.get_file_index_path(index_name)?;
-        let file_index_meta_json = serde_json::to_string(&metadata).map_err(|e| {
-            format!(
-                "Failed to serialize file index metadata for index {index_name}: {e}"
-            )
-        })?;
-        std::fs::write(&file_index_path, file_index_meta_json)
-            .map_err(|e| format!("Failed to write file index metadata: {e}"))?;
-
-        Ok(())
+        let bytes = change::encode(&metadata)
+            .map_err(|e| format!("Failed to encode file index metadata: {e}"))?;
+        fs::write(&file_index_path, bytes)
+            .map_err(|e| format!("Failed to write file index metadata to {file_index_path:?}: {e}"))
     }
 
     fn read_file_index_metadata(&self, index_name: &str) -> Result<Vec<FileIndexMetadata>, String> {
@@ -199,18 +189,11 @@ impl IndexStorage for FsStorage {
             return Ok(Vec::new());
         }
 
-        let file_index_meta_json = std::fs::read_to_string(&file_index_path).map_err(|e| {
-            format!(
-                "Failed to read file index metadata for index {index_name}: {e}"
-            )
+        let bytes = fs::read(&file_index_path).map_err(|e| {
+            format!("Failed to read file index metadata from {file_index_path:?}: {e}")
         })?;
-        let metadata: Vec<FileIndexMetadata> = serde_json::from_str(&file_index_meta_json)
-            .map_err(|e| {
-                format!(
-                    "Failed to parse file index metadata JSON for index {index_name}: {e}"
-                )
-            })?;
-
-        Ok(metadata)
+        change::decode(&bytes).map_err(|e| {
+            format!("Failed to decode file index metadata from {file_index_path:?}: {e}")
+        })
     }
 }

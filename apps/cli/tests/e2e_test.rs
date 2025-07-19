@@ -82,11 +82,7 @@ fn validate_result_by_file(
     let result = results
         .iter()
         .find(|result| result["path"].as_str().unwrap_or("").contains(file_name))
-        .unwrap_or_else(|| {
-            panic!(
-                "Should find {file_name} in search results for '{query}'"
-            )
-        });
+        .unwrap_or_else(|| panic!("Should find {file_name} in search results for '{query}'"));
 
     let snippet = result["snippet"].as_str().unwrap_or("");
     // Strip HTML tags for content comparison since the CodeTokenizer generates highlighted snippets

@@ -59,9 +59,7 @@ struct AppState {
     catalog: Arc<IndexCatalog>,
 }
 
-async fn list_indexes(
-    State(state): State<AppState>,
-) -> ResponseJson<Vec<IndexResponse>> {
+async fn list_indexes(State(state): State<AppState>) -> ResponseJson<Vec<IndexResponse>> {
     match state.catalog.list() {
         Ok(indexes) => {
             let response: Vec<IndexResponse> = indexes
@@ -122,7 +120,7 @@ async fn search_index(
             })?;
             let duration = start_time.elapsed();
             let duration_ms = duration.as_secs_f64() * 1000.0;
-            
+
             let total_results = results.len();
             let response = SearchResponse {
                 query: query.clone(),
@@ -353,7 +351,9 @@ impl HttpServer {
             let beetle_home_path = PathBuf::from(get_beetle_home());
             let storage = FsStorage::new(beetle_home_path);
             let catalog = IndexCatalog::new(storage);
-            let app_state = AppState { catalog: Arc::new(catalog) };
+            let app_state = AppState {
+                catalog: Arc::new(catalog),
+            };
 
             let app = Router::new()
                 .route("/api/indexes", get(list_indexes).post(create_index))

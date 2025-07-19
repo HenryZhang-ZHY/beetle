@@ -4,3 +4,14 @@ rust = "latest"
 node = "latest"
 claude-code = "latest"
 bun = "latest"
+
+[tasks.pre-commit]
+run = [
+  "cargo fmt",
+  "cargo clippy --fix --allow-dirty",
+]
+
+[tasks.test]
+run = [
+  "cargo test -- --test-threads=24",
+]

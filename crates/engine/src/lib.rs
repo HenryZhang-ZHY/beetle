@@ -1,9 +1,9 @@
 mod catalog;
-mod file_status_index;
-mod tokenizers;
+pub mod change;
 mod schema;
 pub mod search;
 pub mod storage;
+mod tokenizers;
 mod writter;
 
 pub use catalog::IndexCatalog;

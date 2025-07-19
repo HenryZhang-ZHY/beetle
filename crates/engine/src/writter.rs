@@ -1,11 +1,10 @@
-use crate::file_status_index::{diff_file_index_metadata, FileScanner};
+use crate::change::{diff_file_index_metadata, scan};
 use crate::schema::{CodeIndexDocument, CodeIndexSchema};
 use crate::storage::{IndexStorage, IndexStorageMetadata};
 use rayon::prelude::*;
+use std::time::Instant;
 use tantivy::{Index, TantivyDocument};
 use tracing::{info, span, Level};
-use std::time::Instant;
-
 
 pub struct IndexWriter<'a> {
     storage: &'a dyn IndexStorage,
@@ -34,11 +33,12 @@ impl<'a> IndexWriter<'a> {
     }
 
     pub fn index(&mut self) -> Result<(), String> {
-        let _span = span!(Level::INFO, "index_writer_index", 
+        let _span = span!(Level::INFO, "index_writer_index",
             index_name = %self.index_metadata.index_name,
             target_path = %self.index_metadata.target_path
-        ).entered();
-        
+        )
+        .entered();
+
         let start_time = Instant::now();
 
         let file_index_snapshot = self
@@ -49,8 +49,7 @@ impl<'a> IndexWriter<'a> {
             file_index_snapshot.len()
         );
 
-        let file_scanner = FileScanner {};
-        let manifest = file_scanner.scan(&self.index_metadata.target_path);
+        let manifest = scan(&self.index_metadata.target_path);
         info!("scanned current file index with {} files", manifest.len());
 
         let delta = diff_file_index_metadata(&file_index_snapshot, &manifest);
@@ -67,8 +66,8 @@ impl<'a> IndexWriter<'a> {
         for file in removed {
             let file_path = file.path.clone();
             self.writer.delete_term(tantivy::Term::from_field_text(
-            code_index_schema.path,
-            &file_path,
+                code_index_schema.path,
+                &file_path,
             ));
         }
         let removal_duration = removal_start.elapsed();
@@ -83,15 +82,17 @@ impl<'a> IndexWriter<'a> {
         const BATCH_SIZE: usize = 100;
         let batch_count = total_files.div_ceil(BATCH_SIZE);
         let processing_start = Instant::now();
-        
+
         for (batch_idx, batch) in files_to_update.chunks(BATCH_SIZE).enumerate() {
-            let batch_span = span!(Level::INFO, "process_batch", 
+            let batch_span = span!(
+                Level::INFO,
+                "process_batch",
                 batch_index = batch_idx,
                 batch_size = batch.len(),
                 total_batches = batch_count
             );
             let _batch_guard = batch_span.enter();
-            
+
             let batch_start = Instant::now();
 
             let documents: Result<Vec<_>, _> = batch
@@ -147,12 +148,16 @@ impl<'a> IndexWriter<'a> {
             total_duration_ms = total_duration.as_millis(),
             processing_duration_ms = processing_duration.as_millis(),
             commit_duration_ms = commit_duration.as_millis(),
-            files_per_sec = if total_duration.as_secs_f64() > 0.0 { 
-                (total_files as f64 / total_duration.as_secs_f64()) as u64 
-            } else { 0 },
-            docs_per_sec = if processing_duration.as_secs_f64() > 0.0 { 
-                (total_files as f64 / processing_duration.as_secs_f64()) as u64 
-            } else { 0 },
+            files_per_sec = if total_duration.as_secs_f64() > 0.0 {
+                (total_files as f64 / total_duration.as_secs_f64()) as u64
+            } else {
+                0
+            },
+            docs_per_sec = if processing_duration.as_secs_f64() > 0.0 {
+                (total_files as f64 / processing_duration.as_secs_f64()) as u64
+            } else {
+                0
+            },
             "indexing completed"
         );
 
