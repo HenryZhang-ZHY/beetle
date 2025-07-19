@@ -2,7 +2,7 @@ use crate::cli::get_beetle_home;
 use crate::cli::CommandOutput;
 use crate::static_files::serve_static_file;
 use axum::{
-    extract::{Path, Query},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::Json as ResponseJson,
     routing::{get, post},
@@ -13,6 +13,7 @@ use engine::storage::FsStorage;
 use engine::IndexCatalog;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::signal;
 
 #[derive(Serialize)]
@@ -52,17 +53,15 @@ struct CreateIndexRequest {
     path: String,
 }
 
-fn create_index_catalog() -> IndexCatalog {
-    let beetl_home_path = PathBuf::from(get_beetle_home());
-    let storage = FsStorage::new(beetl_home_path);
-
-    IndexCatalog::new(storage)
+#[derive(Clone)]
+struct AppState {
+    catalog: Arc<IndexCatalog>,
 }
 
-async fn list_indexes() -> ResponseJson<Vec<IndexResponse>> {
-    let catalog = create_index_catalog();
-
-    match catalog.list() {
+async fn list_indexes(
+    State(state): State<AppState>,
+) -> ResponseJson<Vec<IndexResponse>> {
+    match state.catalog.list() {
         Ok(indexes) => {
             let response: Vec<IndexResponse> = indexes
                 .into_iter()
@@ -81,11 +80,10 @@ async fn list_indexes() -> ResponseJson<Vec<IndexResponse>> {
 }
 
 async fn get_index_details(
+    State(state): State<AppState>,
     Path(index_name): Path<String>,
 ) -> Result<ResponseJson<IndexDetailResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
-    let catalog = create_index_catalog();
-
-    match catalog.get_matadata(&index_name) {
+    match state.catalog.get_matadata(&index_name) {
         Ok(metadata) => {
             let response = IndexDetailResponse {
                 index_name: metadata.index_name.clone(),
@@ -104,14 +102,13 @@ async fn get_index_details(
 }
 
 async fn search_index(
+    State(state): State<AppState>,
     Path(index_name): Path<String>,
     Query(params): Query<SearchQuery>,
 ) -> Result<ResponseJson<SearchResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
-    let catalog = create_index_catalog();
-
     let query = params.q;
 
-    match catalog.get_searcher(&index_name) {
+    match state.catalog.get_searcher(&index_name) {
         Ok(searcher) => {
             let results = searcher.search(&query).map_err(|e| {
                 (
@@ -140,10 +137,9 @@ async fn search_index(
 }
 
 async fn create_index(
+    State(state): State<AppState>,
     ResponseJson(payload): ResponseJson<CreateIndexRequest>,
 ) -> Result<ResponseJson<IndexResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
-    let catalog = create_index_catalog();
-
     // Validate path exists
     let target_path = std::path::Path::new(&payload.path);
     if !target_path.exists() {
@@ -165,7 +161,7 @@ async fn create_index(
     }
 
     // Check if index already exists
-    match catalog.list() {
+    match state.catalog.list() {
         Ok(existing_indexes) => {
             if existing_indexes
                 .iter()
@@ -184,7 +180,7 @@ async fn create_index(
         }
     }
 
-    match catalog.create(&payload.name, &payload.path) {
+    match state.catalog.create(&payload.name, &payload.path) {
         Ok(_) => {
             let response = IndexResponse {
                 name: payload.name,
@@ -202,12 +198,11 @@ async fn create_index(
 }
 
 async fn reindex_index(
+    State(state): State<AppState>,
     Path(index_name): Path<String>,
 ) -> Result<ResponseJson<IndexResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
-    let catalog = create_index_catalog();
-
     // Get existing index metadata to retrieve the target path
-    let metadata = match catalog.get_matadata(&index_name) {
+    let metadata = match state.catalog.get_matadata(&index_name) {
         Ok(metadata) => metadata,
         Err(_) => {
             return Err((
@@ -220,7 +215,7 @@ async fn reindex_index(
     };
 
     // Reset the index (clear existing data)
-    match catalog.reset(&index_name) {
+    match state.catalog.reset(&index_name) {
         Ok(_) => {}
         Err(e) => {
             return Err((
@@ -233,7 +228,7 @@ async fn reindex_index(
     }
 
     // Create a new writer to rebuild the index
-    let mut writer = match catalog.get_writer(&index_name) {
+    let mut writer = match state.catalog.get_writer(&index_name) {
         Ok(writer) => writer,
         Err(e) => {
             return Err((
@@ -264,11 +259,10 @@ async fn reindex_index(
 }
 
 async fn delete_index(
+    State(state): State<AppState>,
     Path(index_name): Path<String>,
 ) -> Result<ResponseJson<IndexResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
-    let catalog = create_index_catalog();
-
-    let metadata = match catalog.get_matadata(&index_name) {
+    let metadata = match state.catalog.get_matadata(&index_name) {
         Ok(metadata) => metadata,
         Err(_) => {
             return Err((
@@ -280,7 +274,7 @@ async fn delete_index(
         }
     };
 
-    match catalog.remove(&index_name) {
+    match state.catalog.remove(&index_name) {
         Ok(_) => {
             let response = IndexResponse {
                 name: index_name.clone(),
@@ -298,10 +292,10 @@ async fn delete_index(
 }
 
 async fn update_index(
+    State(state): State<AppState>,
     Path(index_name): Path<String>,
 ) -> Result<ResponseJson<IndexResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
-    let catalog = create_index_catalog();
-    let metadata = match catalog.get_matadata(&index_name) {
+    let metadata = match state.catalog.get_matadata(&index_name) {
         Ok(metadata) => metadata,
         Err(_) => {
             return Err((
@@ -313,7 +307,7 @@ async fn update_index(
         }
     };
 
-    let mut writer = match catalog.get_writer(&index_name) {
+    let mut writer = match state.catalog.get_writer(&index_name) {
         Ok(writer) => writer,
         Err(e) => {
             return Err((
@@ -349,6 +343,12 @@ impl HttpServer {
         let runtime = tokio::runtime::Runtime::new().unwrap();
 
         runtime.block_on(async move {
+            // Create shared catalog once
+            let beetle_home_path = PathBuf::from(get_beetle_home());
+            let storage = FsStorage::new(beetle_home_path);
+            let catalog = IndexCatalog::new(storage);
+            let app_state = AppState { catalog: Arc::new(catalog) };
+
             let app = Router::new()
                 .route("/api/indexes", get(list_indexes).post(create_index))
                 .route(
@@ -358,7 +358,8 @@ impl HttpServer {
                 .route("/api/indexes/{index_name}/search", get(search_index))
                 .route("/api/indexes/{index_name}/reindex", post(reindex_index))
                 .route("/api/indexes/{index_name}/update", post(update_index))
-                .fallback(serve_static_file);
+                .fallback(serve_static_file)
+                .with_state(app_state);
 
             let address = format!("{}:{}", "localhost", port);
             let listener = match tokio::net::TcpListener::bind(&address).await {

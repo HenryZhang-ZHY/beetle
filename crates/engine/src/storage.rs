@@ -11,7 +11,7 @@ pub struct IndexStorageMetadata {
     pub target_path: String,
 }
 
-pub trait IndexStorage {
+pub trait IndexStorage: Send + Sync {
     fn index_dir(&self) -> String;
     fn create(&self, index_name: &str, target_path: &str) -> Result<Index, String>;
     fn open(&self, index_name: &str) -> Result<Index, String>;
