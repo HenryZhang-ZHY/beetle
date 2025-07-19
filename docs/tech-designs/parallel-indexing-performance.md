@@ -104,13 +104,20 @@ files_to_update
 - [x] Maintain sequential writing to IndexWriter (not thread-safe)
 - [x] Implement proper error handling with context preservation
 
-#### Phase 2: Advanced Optimization
+#### Phase 2: Indexing Performance Observability
+- [ ] Integrate the `tracing` crate for structured, async-aware instrumentation  
+- [ ] Add `tracing::span!` and `tracing::info!` calls inside `IndexWriter::index()` to measure:  
+  • overall indexing duration  
+  • per-batch latency  
+  • docs/sec & files/sec throughput  
+
+#### Phase 3: Advanced Optimization
 - [ ] Implement adaptive batch sizing based on available memory
 - [ ] Add memory usage monitoring to prevent OOM
 - [ ] Consider using channels for producer-consumer pattern
 - [ ] Add configuration for parallel vs sequential modes
 
-#### Phase 3: Performance Monitoring
+#### Phase 4: Performance Monitoring
 - [ ] Add metrics collection for indexing performance
 - [ ] Implement timing measurements for parallel vs sequential processing
 - [ ] Add configuration options for tuning parallelism
@@ -212,23 +219,23 @@ impl Default for IndexWriterConfig {
 - Test scaling behavior with different core counts
 
 ### Migration Plan
-
-1. **Phase 1**: Add rayon dependency and basic parallel processing (behind feature flag)
-2. **Phase 2**: Enable by default with fallback to sequential mode
-3. **Phase 3**: Add configuration options and performance tuning
-4. **Phase 4**: Remove sequential mode if parallel proves stable
+1. **Phase 1**: Add `rayon` dependency and basic parallel processing (behind feature flag)  
+2. **Phase 2**: Add `tracing`-based observability for indexing performance  
+3. **Phase 3**: Enable parallel processing by default with fallback to sequential mode  
+4. **Phase 4**: Add configuration options and performance tuning  
+5. **Phase 5**: Remove sequential mode if parallel proves stable
 
 ### Dependencies
 
 #### New Dependencies:
-- `rayon = "1.8"` - Latest stable version
-- `num_cpus = "1.16"` - For CPU detection if needed
+- `rayon = "1.8"` – parallelism
+- `num_cpus = "1.16"` – optional CPU detection
 
 #### Cargo.toml updates:
 ```toml
 [dependencies]
-rayon = "1.8"
-num_cpus = "1.16"  # Optional: for thread count optimization
+rayon     = "1.8"
+num_cpus  = "1.16"   # Optional: for thread count optimization
 ```
 
 ### Success Criteria
