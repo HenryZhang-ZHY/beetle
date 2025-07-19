@@ -11,3 +11,5 @@ pub use catalog::IndexCatalog;
 pub use crate::search::{IndexSearcher, SearchResultItem};
 
 pub use crate::storage::{FsStorage, IndexStorage};
+
+pub use crate::tokenizers::CodeTokenizer;

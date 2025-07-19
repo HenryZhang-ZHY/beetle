@@ -89,8 +89,15 @@ fn validate_result_by_file(
         });
 
     let snippet = result["snippet"].as_str().unwrap_or("");
+    // Strip HTML tags for content comparison since the CodeTokenizer generates highlighted snippets
+    let plain_snippet = snippet
+        .replace("<b>", "")
+        .replace("</b>", "")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"");
     assert!(
-        snippet.contains(expected_snippet),
+        plain_snippet.contains(expected_snippet),
         "Search results for '{query}' should contain '{expected_snippet}' in {file_name} snippet"
     );
 }

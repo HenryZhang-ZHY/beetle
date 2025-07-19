@@ -1,7 +1,7 @@
 use crate::file_status_index::FileIndexMetadata;
 use crate::schema::CodeIndexSchema;
+use crate::tokenizers::CodeTokenizer;
 use std::path::PathBuf;
-use tantivy::tokenizer::NgramTokenizer;
 use tantivy::Index;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -110,7 +110,7 @@ impl IndexStorage for FsStorage {
             .map_err(|e| format!("Failed to create index {index_name}: {e}"))?;
         index
             .tokenizers()
-            .register("ngram3", NgramTokenizer::new(3, 3, false).unwrap());
+            .register("code", CodeTokenizer::default());
 
         Ok(index)
     }
@@ -125,7 +125,7 @@ impl IndexStorage for FsStorage {
             .map_err(|e| format!("Failed to open index {index_name}: {e}"))?;
         index
             .tokenizers()
-            .register("ngram3", NgramTokenizer::new(3, 3, false).unwrap());
+            .register("code", CodeTokenizer::default());
 
         Ok(index)
     }

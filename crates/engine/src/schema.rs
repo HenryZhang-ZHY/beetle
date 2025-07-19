@@ -21,7 +21,7 @@ impl CodeIndexSchema {
         let content_options = TextOptions::default()
             .set_indexing_options(
                 TextFieldIndexing::default()
-                    .set_tokenizer("ngram3")
+                    .set_tokenizer("code")
                     .set_index_option(IndexRecordOption::WithFreqsAndPositions),
             )
             .set_stored();
