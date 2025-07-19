@@ -1,5 +1,6 @@
 mod catalog;
 mod file_status_index;
+mod tokenizers;
 mod schema;
 pub mod search;
 pub mod storage;
