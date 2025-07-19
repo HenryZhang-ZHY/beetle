@@ -22,7 +22,6 @@ Implement parallel processing using the `rayon` crate to distribute file process
 #### 1. Parallel Document Processing
 ```rust
 use rayon::prelude::*;
-use std::sync::Mutex;
 
 // Replace sequential for-loop with parallel iterator
 let files_to_update: Vec<_> = delta.added.into_iter().chain(delta.modified).collect();
@@ -31,10 +30,8 @@ let files_to_update: Vec<_> = delta.added.into_iter().chain(delta.modified).coll
 let documents: Result<Vec<_>, _> = files_to_update
     .par_iter()
     .map(|file| {
-        let document = CodeIndexDocument::from_path(&file.path)
-            .map_err(|e| format!("Failed to create document from {}: {}", file.path, e))?;
-        let tantivy_doc = document.to_tantivy_document(&code_index_schema.schema);
-        Ok(tantivy_doc)
+        let document = CodeIndexDocument::from_path(&file.path);
+        Ok(document.to_tantivy_document(&code_index_schema.schema))
     })
     .collect();
 
@@ -80,8 +77,7 @@ files_to_update
         let documents: Result<Vec<_>, _> = batch
             .par_iter()
             .map(|file| {
-                let document = CodeIndexDocument::from_path(&file.path)
-                    .map_err(|e| format!("Failed to process {}: {}", file.path, e))?;
+                let document = CodeIndexDocument::from_path(&file.path);
                 Ok(document.to_tantivy_document(&code_index_schema.schema))
             })
             .collect();
@@ -105,11 +101,13 @@ files_to_update
 - [x] Implement proper error handling with context preservation
 
 #### Phase 2: Indexing Performance Observability
-- [ ] Integrate the `tracing` crate for structured, async-aware instrumentation  
-- [ ] Add `tracing::span!` and `tracing::info!` calls inside `IndexWriter::index()` to measure:  
+- [x] Integrate the `tracing` crate for structured, async-aware instrumentation  
+- [x] Add `tracing::span!` and `tracing::info!` calls inside `IndexWriter::index()` to measure:  
   • overall indexing duration  
   • per-batch latency  
   • docs/sec & files/sec throughput  
+  • document creation vs addition timing
+  • commit duration tracking
 
 #### Phase 3: Advanced Optimization
 - [ ] Implement adaptive batch sizing based on available memory
@@ -127,6 +125,13 @@ files_to_update
 #### Modified `IndexWriter::index()` method:
 ```rust
 pub fn index(&mut self) -> Result<(), String> {
+    let _span = span!(Level::INFO, "index_writer_index", 
+        index_name = %self.index_metadata.index_name,
+        target_path = %self.index_metadata.target_path.display()
+    ).entered();
+    
+    let start_time = Instant::now();
+    
     // ... existing setup code ...
     
     let files_to_update: Vec<_> = delta.added.into_iter().chain(delta.modified).collect();
@@ -134,15 +139,21 @@ pub fn index(&mut self) -> Result<(), String> {
     // Process files in batches to manage memory usage
     const BATCH_SIZE: usize = 100;
     
-    for batch in files_to_update.chunks(BATCH_SIZE) {
+    for (batch_idx, batch) in files_to_update.chunks(BATCH_SIZE).enumerate() {
+        let batch_span = span!(Level::INFO, "process_batch", 
+            batch_index = batch_idx,
+            batch_size = batch.len()
+        );
+        let _batch_guard = batch_span.enter();
+        
+        let batch_start = Instant::now();
+        
         // Process batch in parallel to create documents
         let documents: Result<Vec<_>, _> = batch
             .par_iter()
             .map(|file| -> Result<tantivy::Document, String> {
-                let document = CodeIndexDocument::from_path(&file.path)
-                    .map_err(|e| format!("Failed to create document from {}: {}", file.path, e))?;
-                let tantivy_doc = document.to_tantivy_document(&code_index_schema.schema);
-                Ok(tantivy_doc)
+                let document = CodeIndexDocument::from_path(&file.path);
+                Ok(document.to_tantivy_document(&code_index_schema.schema))
             })
             .collect();
         
@@ -151,6 +162,14 @@ pub fn index(&mut self) -> Result<(), String> {
             self.writer.add_document(doc)
                 .map_err(|e| format!("Failed to add document: {}", e))?;
         }
+        
+        let batch_duration = batch_start.elapsed();
+        info!(
+            batch_size = batch.len(),
+            duration_ms = batch_duration.as_millis(),
+            files_per_sec = (batch.len() as f64 / batch_duration.as_secs_f64()) as u64,
+            "completed batch processing"
+        );
     }
     
     // ... rest of method ...
@@ -219,8 +238,8 @@ impl Default for IndexWriterConfig {
 - Test scaling behavior with different core counts
 
 ### Migration Plan
-1. **Phase 1**: Add `rayon` dependency and basic parallel processing (behind feature flag)  
-2. **Phase 2**: Add `tracing`-based observability for indexing performance  
+1. **Phase 1**: Add `rayon` dependency and basic parallel processing (behind feature flag) ✅
+2. **Phase 2**: Add `tracing`-based observability for indexing performance ✅
 3. **Phase 3**: Enable parallel processing by default with fallback to sequential mode  
 4. **Phase 4**: Add configuration options and performance tuning  
 5. **Phase 5**: Remove sequential mode if parallel proves stable
@@ -228,13 +247,15 @@ impl Default for IndexWriterConfig {
 ### Dependencies
 
 #### New Dependencies:
-- `rayon = "1.8"` – parallelism
+- `rayon = "1.8"` – parallelism ✅
+- `tracing = "0.1"` – structured logging and performance instrumentation ✅
 - `num_cpus = "1.16"` – optional CPU detection
 
 #### Cargo.toml updates:
 ```toml
 [dependencies]
 rayon     = "1.8"
+tracing   = "0.1"
 num_cpus  = "1.16"   # Optional: for thread count optimization
 ```
 
@@ -247,3 +268,4 @@ num_cpus  = "1.16"   # Optional: for thread count optimization
 - [ ] Maintained error handling with proper context
 - [ ] Zero data corruption or index inconsistency
 - [ ] Comprehensive test coverage including edge cases
+- [x] Comprehensive performance observability with structured logging
