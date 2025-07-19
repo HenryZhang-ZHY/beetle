@@ -35,6 +35,7 @@ struct SearchResponse {
     index_name: String,
     results: Vec<SearchResultItem>,
     total_results: usize,
+    duration_ms: f64,
 }
 
 #[derive(Serialize)]
@@ -110,6 +111,7 @@ async fn search_index(
 
     match state.catalog.get_searcher(&index_name) {
         Ok(searcher) => {
+            let start_time = std::time::Instant::now();
             let results = searcher.search(&query).map_err(|e| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -118,12 +120,16 @@ async fn search_index(
                     }),
                 )
             })?;
+            let duration = start_time.elapsed();
+            let duration_ms = duration.as_secs_f64() * 1000.0;
+            
             let total_results = results.len();
             let response = SearchResponse {
                 query: query.clone(),
                 index_name: index_name.clone(),
                 results,
                 total_results,
+                duration_ms,
             };
             Ok(ResponseJson(response))
         }

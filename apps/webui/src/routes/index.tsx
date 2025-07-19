@@ -23,6 +23,7 @@ interface SearchResponse {
   index_name: string
   results: SearchResult[]
   total_results: number
+  duration_ms: number
 }
 
 export const Route = createFileRoute('/')({
@@ -176,11 +177,13 @@ function IndexPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Search Results
-                </h2>
                 <p className="text-sm text-slate-600">
                   {searchResults.total_results} results for "{searchResults.query}" in {searchResults.index_name}
+                  <span className="ml-2 text-slate-500">
+                    • {searchResults.duration_ms < 1 
+                      ? `${(searchResults.duration_ms).toFixed(2)}ms` 
+                      : `${(searchResults.duration_ms).toFixed(1)}ms`}
+                  </span>
                 </p>
               </div>
             </div>
