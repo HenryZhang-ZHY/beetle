@@ -408,6 +408,7 @@ dependencies = [
  "anyhow",
  "dunce",
  "ignore",
+ "rayon",
  "serde",
  "serde_json",
  "tantivy",

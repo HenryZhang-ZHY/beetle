@@ -1,7 +1,8 @@
 use crate::file_status_index::{diff_file_index_metadata, FileScanner};
 use crate::schema::{CodeIndexDocument, CodeIndexSchema};
 use crate::storage::{IndexStorage, IndexStorageMetadata};
-use tantivy::Index;
+use rayon::prelude::*;
+use tantivy::{Index, TantivyDocument};
 use tracing::trace;
 
 
@@ -62,16 +63,26 @@ impl<'a> IndexWriter<'a> {
             ));
         }
 
-        let files_to_update = delta.added.into_iter().chain(delta.modified);
-        for file in files_to_update {
-            let document = CodeIndexDocument::from_path(&file.path);
-            let tantivy_doc = document.to_tantivy_document(&code_index_schema.schema);
-            self.writer.add_document(tantivy_doc).map_err(|e| {
-                format!(
-                    "Failed to add document to index {}: {}",
-                    self.index_metadata.index_name, e
-                )
-            })?;
+        let files_to_update: Vec<_> = delta.added.into_iter().chain(delta.modified).collect();
+
+        const BATCH_SIZE: usize = 100;        
+        for batch in files_to_update.chunks(BATCH_SIZE) {
+            let documents: Result<Vec<_>, _> = batch
+                .par_iter()
+                .map(|file| -> Result<TantivyDocument, String> {
+                    let document = CodeIndexDocument::from_path(&file.path);
+                    Ok(document.to_tantivy_document(&code_index_schema.schema))
+                })
+                .collect();
+
+            for doc in documents? {
+                self.writer.add_document(doc).map_err(|e| {
+                    format!(
+                        "Failed to add document to index {}: {}",
+                        self.index_metadata.index_name, e
+                    )
+                })?;
+            }
         }
 
         self.writer.commit().map_err(|e| {
