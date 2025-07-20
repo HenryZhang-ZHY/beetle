@@ -6,12 +6,14 @@ claude-code = "latest"
 bun = "latest"
 
 [tasks.pre-commit]
-run = [
-  "cargo fmt",
-  "cargo clippy --fix --allow-dirty",
-]
+run = ["cargo fmt", "cargo clippy --fix --allow-dirty"]
 
 [tasks.test]
-run = [
-  "cargo test -- --test-threads=24",
-]
+run = ["cargo test -- --test-threads=24"]
+
+[tasks.dev-backend]
+run = "cargo run -p beetle -- serve -p 3001"
+
+[tasks.dev-frontend]
+run = "cd apps/webui && bun dev"
+

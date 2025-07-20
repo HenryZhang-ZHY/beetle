@@ -72,6 +72,11 @@ function IndexPage() {
     }
   }
 
+  const openInVSCode = (filePath: string) => {
+    const vscodeUrl = `vscode://file/${filePath}`
+    window.open(vscodeUrl, '_blank')
+  }
+
   useEffect(() => {
     fetchIndexes()
   }, [])
@@ -201,12 +206,16 @@ function IndexPage() {
             ) : (
               <div className="space-y-4">
                 {searchResults.results.map((result, index) => (
-                  <div key={index} className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div 
+                    key={index} 
+                    className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => openInVSCode(result.path)}
+                  >
                     <div className="flex items-start space-x-3">
                       <FileTextOutlined className="text-slate-400 mt-1 text-lg" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-3 mb-3">
-                          <code className="text-sm font-medium text-slate-900 bg-slate-100 px-2 py-1 rounded">
+                          <code className="text-sm font-medium text-slate-900 bg-slate-100 px-2 py-1 rounded hover:bg-slate-200 transition-colors">
                             {result.path}
                           </code>
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
